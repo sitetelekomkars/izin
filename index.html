@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İzin Yönetim Sistemi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS Bağlantısı: Hem Yerel/GitHub hem GAS uyumlu olması için -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Not: Google Apps Script'e yapıştırırken <?!= include('style'); ?> kullanabilirsiniz. -->
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>İzin Sistemi</h1>
+            <div class="user-info view-hidden" id="user-info-panel">
+                <span id="user-display">Kullanıcı</span>
+                <button class="btn-logout" onclick="logout()">Çıkış</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Giriş Ekranı -->
+            <div id="view-login" class="login-view view-active">
+                <div class="login-card">
+                    <h2>Giriş Yap</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label>Kullanıcı Adı</label>
+                            <input type="text" id="username" class="form-input" placeholder="Kullanıcı adı giriniz"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Şifre</label>
+                            <input type="password" id="password" class="form-input" placeholder="••••••" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Giriş Yap</button>
+                    </form>
+                    <div style="margin-top:20px; font-size: 0.8em; color: gray;">
+                        <p><strong>İlk Giriş Bilgileri:</strong></p>
+                        <p>Temsilciler: rep_ad / proje123</p>
+                        <p>Yöneticiler: tl_user, spv_user, ik_user / 1234</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <div id="view-dashboard" class="view-hidden">
+                <div id="dashboard-content"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JS Bağlantısı -->
+    <script src="app.js"></script>
+    <!-- Not: Google Apps Script'e yapıştırırken <?!= include('app'); ?> kullanabilirsiniz. -->
+</body>
+
+</html>
