@@ -1,8 +1,8 @@
 /* 
-  app.js (LocalStorage & Name Filtering Update)
-  - Remembers Ad Soyad/Sicil in browser.
-  - Fixes "stuck" loading by forcing JSON parsing checks.
-  - Filters request history by local user name.
+  app.js (Red Nedeni ve UI İyileştirme Modu)
+  - Reddet butonuna basınca sebep sorar.
+  - Reddedilen taleplerde sebebi gösterir.
+  - UI takılmalarını önler (async/await fix).
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
@@ -209,11 +209,8 @@ async function submitRequest(e) {
     if (res.status === 'success') {
         Swal.fire('Başarılı', 'İzin talebi iletildi.', 'success');
         e.target.reset();
-
-        // Resetledikten sonra isimleri tekrar koy ki yeniden yazmasın
         document.getElementById('fullname').value = fName;
         document.getElementById('sicil').value = fSicil;
-
         showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
     } else {
         Swal.fire('Hata', 'Bir sorun oluştu: ' + res.message, 'error');
@@ -223,12 +220,9 @@ async function submitRequest(e) {
 
 async function loadMyRequests() {
     const tbody = document.querySelector('#rep-table tbody');
-
-    // Filtreleme için Local'deki ismi kullan
     const filterName = document.getElementById('fullname').value.trim() || localStorage.getItem('mtd_fullname') || '';
     document.getElementById('filter-name-display').innerText = filterName || "Hepsini";
 
-    // İsmi backend'e gönderiyoruz, orada filtreliyor
     const data = await callApi({ action: 'getRequests', role: 'Temsilci', user: currentUser.user, filterName: filterName });
 
     if (!data || data.length === 0) {
@@ -239,7 +233,10 @@ async function loadMyRequests() {
     tbody.innerHTML = data.map(r => `
         <tr>
             <td>${formatDate(r.start)}<br><small>${r.type}</small></td>
-            <td>${getStatusBadge(r.status)}</td>
+            <td>
+                ${getStatusBadge(r.status)}
+                ${getRejectionReason(r) ? '<br><small style="color:#ef4444; font-weight:bold;">' + getRejectionReason(r) + '</small>' : ''}
+            </td>
         </tr>
     `).join('');
 }
@@ -273,21 +270,64 @@ async function loadAdminRequests() {
 }
 
 async function processRequest(id, decision) {
-    const { isConfirmed } = await Swal.fire({
-        title: decision === 'Onaylandı' ? 'Onayla?' : 'Reddet?',
-        text: 'Bu işlemi yapmak istediğinize emin misiniz?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: decision === 'Onaylandı' ? '#22c55e' : '#ef4444',
-        confirmButtonText: 'Evet',
-        cancelButtonText: 'Hayır'
+    let reason = "";
+
+    // Eğer RED ise sebep sor
+    if (decision === 'Reddedildi') {
+        const { value: text, isDismissed } = await Swal.fire({
+            title: 'Reddetme Sebebi',
+            input: 'text',
+            inputPlaceholder: 'Örn: Yetersiz izin bakiyesi',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Reddet',
+            cancelButtonText: 'İptal',
+            inputValidator: (value) => {
+                if (!value) return 'Red sebebini yazmanız gerekmektedir!';
+            }
+        });
+
+        if (isDismissed) return; // İptal edildi
+        reason = text;
+    } else {
+        // Onay ise sadece sor
+        const { isConfirmed } = await Swal.fire({
+            title: 'Onayla?',
+            text: 'Onaylamak istediğinize emin misiniz?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#22c55e',
+            confirmButtonText: 'Evet',
+            cancelButtonText: 'Hayır'
+        });
+        if (!isConfirmed) return;
+    }
+
+    // Yükleniyor...
+    Swal.fire({ title: 'İşleniyor...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const res = await callApi({ action: 'updateStatus' }, 'POST', {
+        id: id, role: currentUser.role, decision: decision, reason: reason
     });
 
-    if (!isConfirmed) return;
+    if (res.status === 'success') {
+        Swal.fire('Tamamlandı', 'İşlem başarılı.', 'success');
+        loadAdminRequests();
+    } else {
+        Swal.fire('Hata', res.message, 'error');
+    }
+}
 
-    await callApi({ action: 'updateStatus' }, 'POST', { id: id, role: currentUser.role, decision: decision });
-    Swal.fire('Tamamlandı', 'İşlem başarılı.', 'success');
-    loadAdminRequests();
+function getRejectionReason(r) {
+    // Red sebebini anlamak için yönetici sütunlarına (tl, spv, ik) bakar
+    if (r.status !== 'red') return null;
+    const checks = [r.ik, r.spv, r.tl];
+    for (const c of checks) {
+        if (c && c.toString().startsWith('Reddedildi:')) {
+            return c.replace('Reddedildi:', 'Sebep:');
+        }
+    }
+    return null;
 }
 
 function getStatusBadge(code) {
@@ -304,5 +344,6 @@ function getStatusBadge(code) {
 
 function formatDate(d) {
     if (!d) return '-';
+    // UTC tarihi kısa format
     return d.split('T')[0].split('-').reverse().join('.');
 }
