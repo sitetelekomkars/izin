@@ -1,5 +1,8 @@
 /* 
-  app.js (Fixed Click Handler & Global Scope)
+  app.js (İnce Detaylar & Özel Mesajlar Modu)
+  - "TL'ye iletildi", "SPV'ye iletildi" gibi özel geri bildirimler eklendi.
+  - Çıkış butonu çalışıyor.
+  - Hata mesajları detaylandırıldı.
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
@@ -36,13 +39,11 @@ async function callApi(params, method = 'GET', body = null) {
 
     try {
         const res = await fetch(url, options);
-        // Doğrudan JSON parse dene
         const data = await res.json();
         return data;
     } catch (e) {
         console.error("API Hatası:", e);
-        // Hata durumunda (eğer HTML dönerse veya ağ hatası)
-        return { status: 'error', message: 'Sunucuyla iletişim hatası. Lütfen tekrar deneyin.' };
+        return { status: 'error', message: 'Sunucuyla iletişim hatası. Lütfen sonra tekrar deneyin.' };
     }
 }
 
@@ -58,8 +59,13 @@ async function handleLogin(e) {
         document.getElementById('user-display').innerText = `${res.user} (${res.role})`;
         renderDashboard(res.role);
         switchView('dashboard');
+
+        // Hoş geldin tostu (İnce detay)
+        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        Toast.fire({ icon: 'success', title: 'Giriş Başarılı' });
+
     } else {
-        Swal.fire('Hata', res.message || 'Giriş başarısız.', 'error');
+        Swal.fire('Giriş Başarısız', res.message || 'Bilgileri kontrol ediniz.', 'error');
     }
     btn.innerText = 'Giriş Yap'; btn.disabled = false;
 }
@@ -111,18 +117,17 @@ function renderDashboard(role) {
                 <table id="rep-table"><thead><tr><th>Tarih</th><th>Durum</th></tr></thead><tbody><tr><td>Yükleniyor...</td></tr></tbody></table>
             </div>
         `;
-        // Restore LocalStorage
         const f = localStorage.getItem('mtd_fullname');
         if (f) document.getElementById('fullname').value = f;
         const s = localStorage.getItem('mtd_sicil');
         if (s) document.getElementById('sicil').value = s;
 
     } else {
-        // ADMIN PANELI (Basitleştirilmiş Görüntü)
-        let color = role === 'TL' ? '#fff7ed' : '#f5f3ff';
+        let color = role === 'TL' ? '#fff7ed' : (role === 'SPV' ? '#fdf4ff' : '#f5f3ff');
+        let roleName = role === 'TL' ? 'Team Leader' : (role === 'SPV' ? 'Supervisor' : 'İK');
         container.innerHTML = `
             <div class="panel-info" style="background:${color};">
-                🛡️ <strong>${role} Paneli:</strong> Onay Bekleyenler
+                🛡️ <strong>${roleName} Paneli:</strong> Onay Bekleyenler
             </div>
             <table id="admin-table">
                 <thead><tr><th>Personel</th><th>Detay</th><th>İşlem</th></tr></thead>
@@ -164,8 +169,16 @@ async function submitRequest(e) {
             startDate: startVal, endDate: endVal, reason: document.getElementById('reason').value
         };
         const res = await callApi({ action: 'createRequest' }, 'POST', data);
+
         if (res.status === 'success') {
-            Swal.fire('Başarılı', 'İletildi.', 'success');
+            // DETAYLI MESAJ
+            Swal.fire({
+                title: 'Başarılı!',
+                text: 'İzin talebiniz oluşturuldu ve TL onayına iletildi.',
+                icon: 'success',
+                confirmButtonText: 'Tamam'
+            });
+
             e.target.reset();
             document.getElementById('fullname').value = fName;
             document.getElementById('sicil').value = fSicil;
@@ -210,7 +223,7 @@ async function loadAdminRequests() {
             <td>
                 ${r.type}<br>
                 <small style="font-style:italic;">"${r.reason}"</small><br>
-                <small>${formatDate(r.start)} - ${formatDate(r.end)}</small>
+                <small style="color:#64748b">${formatDate(r.start)} - ${formatDate(r.end)}</small>
             </td>
             <td>
                 <button class="action-btn approve" onclick="window.processRequest('${r.id}', 'Onaylandı')">✔</button>
@@ -218,10 +231,9 @@ async function loadAdminRequests() {
             </td>
         </tr>
     `).join('');
-    // "Sicil" bilgisini kaldırdım, şifre sanılmasın diye
 }
 
-// GLOBAL'e EKLEME - Çok Önemli
+// Global Process Request
 window.processRequest = async function (id, decision) {
     let reason = "";
     if (decision === 'Reddedildi') {
@@ -245,7 +257,18 @@ window.processRequest = async function (id, decision) {
     try {
         const res = await callApi({ action: 'updateStatus' }, 'POST', { id: id, role: currentUser.role, decision: decision, reason: reason });
         if (res.status === 'success') {
-            Swal.fire('Başarılı', 'İşlem yapıldı.', 'success');
+
+            // --- DETAYLI ONAY MESAJLARI ---
+            let msg = 'İşlem Başarılı.';
+            if (decision === 'Reddedildi') {
+                msg = 'Talep reddedildi.';
+            } else {
+                if (currentUser.role === 'TL') msg = 'Onaylandı. Talep SPV onayına iletildi.';
+                else if (currentUser.role === 'SPV') msg = 'Onaylandı. Talep İK onayına iletildi.';
+                else if (currentUser.role === 'İK') msg = 'Onaylandı. İzin süreci tamamlandı.';
+            }
+
+            Swal.fire('Tamamlandı', msg, 'success');
             loadAdminRequests();
         } else {
             Swal.fire('Hata', 'Sunucu hatası: ' + res.message, 'error');
@@ -266,9 +289,13 @@ function getStatusBadge(code) {
     const map = { 'tl_bekliyor': 'TL Onayı Bekliyor', 'spv_bekliyor': 'SPV Onayı Bekliyor', 'ik_bekliyor': 'İK Onayı Bekliyor', 'onaylandi': 'Onaylandı', 'red': 'Reddedildi' };
     const label = map[code] || code;
     let cls = '';
+
     if (code === 'onaylandi') cls = 'st-onaylandi';
     else if (code === 'red') cls = 'st-red';
-    else cls = 'st-tl_bekliyor'; // Default turnuncu
+    else if (code === 'tl_bekliyor') cls = 'st-tl_bekliyor';
+    else if (code === 'spv_bekliyor') cls = 'st-spv_bekliyor';
+    else if (code === 'ik_bekliyor') cls = 'st-ik_bekliyor';
+
     return `<span class="status ${cls}">${label}</span>`;
 }
 
