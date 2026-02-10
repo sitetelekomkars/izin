@@ -1,8 +1,6 @@
-/* app.js */
+/* app.js (Ad Soyad ve Sicil No Güncellemeli) */
 
 // *** DİKKAT: BURAYA GOOGLE APPS SCRIPT YAYINLAMA URL'SİNİ YAPIŞTIRIN ***
-// Örnek: 'https://script.google.com/macros/s/AKfycbx.../exec'
-// Tırnakların arasını doldurun
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
 let currentUser = null;
@@ -23,19 +21,13 @@ function switchView(viewName) {
 
 /* --- API YARDIMCISI --- */
 async function callApi(params, method = 'GET', body = null) {
-    if (API_URL === 'GOOGLE_APPS_SCRIPT_URL_BURAYA') {
-        alert("Lütfen app.js dosyasındaki API_URL kısmına Google Script linkini yapıştırın.");
-        return null;
-    }
-
-    // Parametreleri URL'e ekle
     const url = new URL(API_URL);
     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
     const options = {
         method: method,
-        redirect: "follow", // Apps Script için gerekli
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // POST için text/plain önerilir (CORS preflight önler)
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
     };
 
     if (body) options.body = JSON.stringify(body);
@@ -45,8 +37,8 @@ async function callApi(params, method = 'GET', body = null) {
         const json = await res.json();
         return json;
     } catch (e) {
-        alert("Bağlantı Hatası: " + e);
-        return { status: 'error' };
+        console.error(e);
+        return { status: 'error', message: 'Bağlantı hatası' };
     }
 }
 
@@ -99,6 +91,12 @@ function renderRepDashboard(container) {
         <div id="tab-new-request">
             <div class="login-card" style="max-width: 600px; margin: 0; text-align: left;">
                 <form onsubmit="submitRequest(event)">
+                    <!-- Yeni Alanlar: Ad Soyad ve Sicil -->
+                    <div class="form-group" style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                         <div><label>Ad Soyad *</label><input type="text" class="form-input" id="req-fullname" placeholder="Adınızı giriniz" required></div>
+                         <div><label>Sicil No</label><input type="text" class="form-input" id="req-sicil" placeholder="Opsiyonel"></div>
+                    </div>
+                    
                     <div class="form-group"><label>İzin Türü</label>
                         <select class="form-select" id="req-type"><option>Yıllık İzin</option><option>Hastalık</option><option>Mazeret</option></select>
                     </div>
@@ -130,6 +128,8 @@ async function submitRequest(e) {
     const data = {
         action: 'createRequest',
         requester: currentUser.user,
+        fullName: document.getElementById('req-fullname').value, // Yeni
+        sicil: document.getElementById('req-sicil').value,       // Yeni
         project: currentUser.project,
         type: document.getElementById('req-type').value,
         startDate: document.getElementById('req-start').value,
@@ -137,10 +137,19 @@ async function submitRequest(e) {
         reason: document.getElementById('req-reason').value
     };
 
-    await callApi({ action: 'createRequest' }, 'POST', data);
-    alert('Talep iletildi.');
-    e.target.reset();
-    showTab('my-requests', document.querySelectorAll('.tab-btn')[1]);
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.innerText = 'Gönderiliyor...';
+
+    const res = await callApi({ action: 'createRequest' }, 'POST', data);
+
+    if (res.status === 'success') {
+        alert('Talep iletildi.');
+        e.target.reset();
+        showTab('my-requests', document.querySelectorAll('.tab-btn')[1]);
+    } else {
+        alert('Hata: ' + res.message);
+    }
+    btn.disabled = false; btn.innerText = 'Talebi Gönder';
 }
 
 async function loadRequests() {
@@ -148,15 +157,24 @@ async function loadRequests() {
 
     if (currentUser.role === 'Temsilci') {
         const tbody = document.querySelector('#requests-table tbody');
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Kayıt bulunamadı.</td></tr>'; return; }
+
         tbody.innerHTML = data.map(r => `<tr><td>${formatDate(r.start)}</td><td>${r.type}</td><td><span class="status-badge ${getStatusClass(r.status)}">${r.status}</span></td></tr>`).join('');
+
         document.getElementById('stat-pending').innerText = data.filter(r => r.status.includes('Bekliyor')).length;
         document.getElementById('stat-approved').innerText = data.filter(r => r.status === 'Onaylandı').length;
     } else {
         const tbody = document.querySelector('#approval-table tbody');
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Onay bekleyen talep yok.</td></tr>'; return; }
+
         tbody.innerHTML = data.map(r => `
             <tr>
-                <td>${r.requester}</td>
-                <td>${r.type} - ${r.reason}</td>
+                <td>
+                    <b>${r.fullName || r.requester}</b><br>
+                    <small>${r.sicil ? 'Sicil: ' + r.sicil : ''}</small><br>
+                    <small style="color:#aaa">${r.project}</small>
+                </td>
+                <td>${r.type}<br><i>${r.reason}</i><br>${formatDate(r.start)} - ${formatDate(r.end)}</td>
                 <td>
                     <button class="action-btn btn-approve" onclick="processRequest('${r.id}', 'Onaylandı')">Onayla</button>
                     <button class="action-btn btn-reject" onclick="processRequest('${r.id}', 'Reddedildi')">Reddet</button>
@@ -166,7 +184,7 @@ async function loadRequests() {
 }
 
 async function processRequest(id, decision) {
-    if (!confirm('Emin misiniz?')) return;
+    if (!confirm('İşlemi uygulamak istiyor musunuz?')) return;
     await callApi({ action: 'updateStatus' }, 'POST', { id: id, role: currentUser.role, decision: decision });
     alert('İşlem yapıldı.');
     loadRequests();
