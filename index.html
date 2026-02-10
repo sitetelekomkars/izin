@@ -4,39 +4,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İzin Sistemi</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>İzin Yönetim Sistemi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <div class="app-container">
-        <header>
-            <h1>İzin Sistemi</h1>
-            <div class="user-info" id="user-info-panel" style="display:none;">
-                <span id="user-display">User</span>
-                <button class="btn-logout" onclick="logout()">Çıkış</button>
-            </div>
-        </header>
 
+    <div class="app-container">
+
+        <!-- Header -->
+        <div class="header-area">
+            <div class="header-left">
+                <img src="https://cdn-icons-png.flaticon.com/512/2942/2942544.png" alt="Logo" class="logo-img">
+                <h2 class="header-title">İzin Sistemi</h2>
+            </div>
+            <div class="user-info hidden" id="user-info-panel">
+                <span id="user-display" class="user-name-span">User</span>
+                <button class="btn-logout" onclick="logout()">Çıkış Yap</button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
         <main>
-            <div id="view-login" class="login-view view-active">
+
+            <!-- View 1: LOGIN -->
+            <div id="view-login" class="login-view">
                 <div class="login-card">
                     <h2>Giriş Yap</h2>
-                    <form onsubmit="handleLogin(event)">
-                        <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="username"
-                                class="form-input" required></div>
-                        <div class="form-group"><label>Şifre</label><input type="password" id="password"
-                                class="form-input" required></div>
+                    <p style="color:#64748b; margin-bottom:20px; font-size:0.9em;">Personel veya Yönetici Girişi</p>
+                    <form onsubmit="handleLogin(event)" autocomplete="off">
+                        <div class="form-group">
+                            <label>Kullanıcı Adı</label>
+                            <input type="text" id="username" placeholder="Kullanıcı Adı" autocomplete="username"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>Şifre</label>
+                            <input type="password" id="password" placeholder="Şifre" autocomplete="current-password"
+                                required>
+                        </div>
                         <button type="submit" class="btn-primary">Giriş Yap</button>
                     </form>
                 </div>
             </div>
-            <div id="view-dashboard" class="view-hidden">
-                <div id="dashboard-content"></div>
+
+            <!-- View 2: DASHBOARD -->
+            <div id="view-dashboard" class="dashboard-view hidden">
+                <div id="dashboard-content">
+                    <!-- Dynamic Content -->
+                </div>
             </div>
+
         </main>
     </div>
+
     <script src="app.js"></script>
 </body>
 
