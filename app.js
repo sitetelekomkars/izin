@@ -1,25 +1,29 @@
-/* app.js (Ad Soyad ve Sicil No Güncellemeli) */
-
-// *** DİKKAT: BURAYA GOOGLE APPS SCRIPT YAYINLAMA URL'SİNİ YAPIŞTIRIN ***
+/* 
+  app.js (Frontend Logic)
+  Visual: Clean Card Design
+  Features: 3-Stage Approval, Project Isolation, Name/Surname Input
+*/
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
 let currentUser = null;
-const views = { login: document.getElementById('view-login'), dashboard: document.getElementById('view-dashboard') };
 
 function switchView(viewName) {
-    Object.values(views).forEach(el => {
-        el.classList.add('view-hidden');
-        el.classList.remove('view-active');
-    });
-    const target = views[viewName];
-    target.classList.remove('view-hidden');
-    void target.offsetWidth;
-    target.classList.add('view-active');
+    const loginView = document.getElementById('view-login');
+    const dashboardView = document.getElementById('view-dashboard');
+    const userInfo = document.getElementById('user-info-panel');
 
-    document.getElementById('user-info-panel').style.display = (viewName === 'dashboard') ? 'flex' : 'none';
+    if (viewName === 'login') {
+        loginView.classList.remove('hidden');
+        dashboardView.classList.add('hidden');
+        userInfo.classList.add('hidden');
+        document.body.style.background = "#f1f5f9"; // Reset background
+    } else {
+        loginView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        userInfo.classList.remove('hidden');
+    }
 }
 
-/* --- API YARDIMCISI --- */
 async function callApi(params, method = 'GET', body = null) {
     const url = new URL(API_URL);
     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
@@ -29,20 +33,17 @@ async function callApi(params, method = 'GET', body = null) {
         redirect: "follow",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
     };
-
     if (body) options.body = JSON.stringify(body);
 
     try {
         const res = await fetch(url, options);
-        const json = await res.json();
-        return json;
+        return await res.json();
     } catch (e) {
-        console.error(e);
-        return { status: 'error', message: 'Bağlantı hatası' };
+        Swal.fire('Hata', 'Sunucu bağlantı hatası', 'error');
+        return { status: 'error' };
     }
 }
 
-/* --- İŞLEMLER --- */
 async function handleLogin(e) {
     e.preventDefault();
     const u = document.getElementById('username').value;
@@ -56,10 +57,10 @@ async function handleLogin(e) {
     if (res && res.status === 'success') {
         currentUser = res;
         document.getElementById('user-display').innerText = `${res.user} (${res.role})`;
-        setupDashboardByRole(res.role);
+        renderDashboard(res.role);
         switchView('dashboard');
     } else {
-        alert(res ? res.message : 'Hata oluştu');
+        Swal.fire('Giriş Başarısız', res.message || 'Bilgileri kontrol ediniz.', 'error');
     }
     btn.innerText = 'Giriş Yap'; btn.disabled = false;
 }
@@ -69,135 +70,208 @@ function logout() {
     switchView('login');
 }
 
-function setupDashboardByRole(role) {
+function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
-    container.innerHTML = '';
 
-    if (role === 'Temsilci') renderRepDashboard(container);
-    else renderManagementDashboard(container, role);
-}
+    if (role === 'Temsilci') {
+        // --- TEMSİLCİ PANELİ ---
+        container.innerHTML = `
+            <div class="panel-info">
+                👋 <strong>Hoş Geldiniz!</strong> Projeniz: <b>${currentUser.project}</b>. Yeni izin talebi oluşturabilir veya durumunu sorgulayabilirsiniz.
+            </div>
 
-// 1. TEMSİLCİ
-function renderRepDashboard(container) {
-    container.innerHTML = `
-        <div class="dashboard-grid">
-            <div class="stat-card"><h3>Bekleyen</h3><div class="count" id="stat-pending">-</div></div>
-            <div class="stat-card"><h3>Onaylanan</h3><div class="count" id="stat-approved">-</div></div>
-        </div>
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('new-request', this)">Yeni İzin Talebi</button>
-            <button class="tab-btn" onclick="showTab('my-requests', this)">Taleplerim</button>
-        </div>
-        <div id="tab-new-request">
-            <div class="login-card" style="max-width: 600px; margin: 0; text-align: left;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('new-req', this)">Yeni Talep</button>
+                <button class="tab-btn" onclick="showTab('my-req', this)">Geçmiş Taleplerim</button>
+            </div>
+
+            <div id="tab-new-req">
                 <form onsubmit="submitRequest(event)">
-                    <!-- Yeni Alanlar: Ad Soyad ve Sicil -->
-                    <div class="form-group" style="display:grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-                         <div><label>Ad Soyad *</label><input type="text" class="form-input" id="req-fullname" placeholder="Adınızı giriniz" required></div>
-                         <div><label>Sicil No</label><input type="text" class="form-input" id="req-sicil" placeholder="Opsiyonel"></div>
+                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Ad Soyad *</label>
+                            <input type="text" id="fullname" placeholder="Adınız Soyadınız" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Sicil No</label>
+                            <input type="text" id="sicil" placeholder="(Varsa)">
+                        </div>
                     </div>
-                    
-                    <div class="form-group"><label>İzin Türü</label>
-                        <select class="form-select" id="req-type"><option>Yıllık İzin</option><option>Hastalık</option><option>Mazeret</option></select>
+
+                    <div class="form-group">
+                        <label>İzin Türü</label>
+                        <select id="type">
+                            <option>Yıllık İzin</option>
+                            <option>Hastalık</option>
+                            <option>Mazeret</option>
+                            <option>Babalık</option>
+                            <option>Evlilik</option>
+                            <option>Diğer</option>
+                        </select>
                     </div>
-                    <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div><label>Başlangıç</label><input type="date" class="form-input" id="req-start" required></div>
-                        <div><label>Bitiş</label><input type="date" class="form-input" id="req-end" required></div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group"><label>Başlangıç</label><input type="date" id="start" required></div>
+                        <div class="form-group"><label>Bitiş</label><input type="date" id="end" required></div>
                     </div>
-                    <div class="form-group"><label>Açıklama</label><textarea class="form-input" id="req-reason" rows="3" required></textarea></div>
+
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <textarea id="reason" rows="3" placeholder="Sebep belirtiniz..." required></textarea>
+                    </div>
+
                     <button type="submit" class="btn-primary">Talebi Gönder</button>
                 </form>
             </div>
-        </div>
-        <div id="tab-my-requests" style="display:none;">
-            <div class="table-container">
-                <table id="requests-table"><thead><tr><th>Tarih</th><th>Tür</th><th>Durum</th></tr></thead><tbody></tbody></table>
+
+            <div id="tab-my-req" class="hidden">
+                <table id="rep-table">
+                    <thead><tr><th>Tarih</th><th>Durum</th></tr></thead>
+                    <tbody><tr><td colspan="2">Yükleniyor...</td></tr></tbody>
+                </table>
             </div>
-        </div>`;
-    loadRequests();
-}
-
-// 2. YÖNETİCİ
-function renderManagementDashboard(container, role) {
-    container.innerHTML = `<h3>Onay Bekleyenler (${role})</h3><div class="table-container"><table id="approval-table"><thead><tr><th>Personel</th><th>Detay</th><th>İşlem</th></tr></thead><tbody></tbody></table></div>`;
-    loadRequests();
-}
-
-async function submitRequest(e) {
-    e.preventDefault();
-    const data = {
-        action: 'createRequest',
-        requester: currentUser.user,
-        fullName: document.getElementById('req-fullname').value, // Yeni
-        sicil: document.getElementById('req-sicil').value,       // Yeni
-        project: currentUser.project,
-        type: document.getElementById('req-type').value,
-        startDate: document.getElementById('req-start').value,
-        endDate: document.getElementById('req-end').value,
-        reason: document.getElementById('req-reason').value
-    };
-
-    const btn = e.target.querySelector('button');
-    btn.disabled = true; btn.innerText = 'Gönderiliyor...';
-
-    const res = await callApi({ action: 'createRequest' }, 'POST', data);
-
-    if (res.status === 'success') {
-        alert('Talep iletildi.');
-        e.target.reset();
-        showTab('my-requests', document.querySelectorAll('.tab-btn')[1]);
+        `;
+        loadMyRequests();
     } else {
-        alert('Hata: ' + res.message);
+        // --- YÖNETİCİ PANELİ (TL, SPV, İK) ---
+        let badgeColor = role === 'TL' ? '#fff7ed' : (role === 'SPV' ? '#fdf4ff' : '#f5f3ff');
+        let badgeText = role === 'TL' ? '#c2410c' : (role === 'SPV' ? '#86198f' : '#6d28d9');
+
+        container.innerHTML = `
+            <div class="panel-info" style="background:${badgeColor}; color:${badgeText}; border-left-color:${badgeText};">
+                🛡️ <strong>${role} Paneli:</strong> 
+                ${role === 'TL' ? 'Personel izinlerini onaylayıp SPV\'ye iletin.' : ''}
+                ${role === 'SPV' ? 'TL onaylı izinleri kontrol edip İK\'ya iletin.' : ''}
+                ${role === 'İK' ? 'Son onay merci.' : ''}
+            </div>
+            
+            <h3>Onay Bekleyenler</h3>
+            <table id="admin-table">
+                <thead><tr><th>Personel / Proje</th><th>Detay</th><th>İşlem</th></tr></thead>
+                <tbody><tr><td colspan="3">Yükleniyor...</td></tr></tbody>
+            </table>
+        `;
+        loadAdminRequests();
     }
-    btn.disabled = false; btn.innerText = 'Talebi Gönder';
-}
-
-async function loadRequests() {
-    const data = await callApi({ action: 'getRequests', role: currentUser.role, user: currentUser.user, project: currentUser.project });
-
-    if (currentUser.role === 'Temsilci') {
-        const tbody = document.querySelector('#requests-table tbody');
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Kayıt bulunamadı.</td></tr>'; return; }
-
-        tbody.innerHTML = data.map(r => `<tr><td>${formatDate(r.start)}</td><td>${r.type}</td><td><span class="status-badge ${getStatusClass(r.status)}">${r.status}</span></td></tr>`).join('');
-
-        document.getElementById('stat-pending').innerText = data.filter(r => r.status.includes('Bekliyor')).length;
-        document.getElementById('stat-approved').innerText = data.filter(r => r.status === 'Onaylandı').length;
-    } else {
-        const tbody = document.querySelector('#approval-table tbody');
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Onay bekleyen talep yok.</td></tr>'; return; }
-
-        tbody.innerHTML = data.map(r => `
-            <tr>
-                <td>
-                    <b>${r.fullName || r.requester}</b><br>
-                    <small>${r.sicil ? 'Sicil: ' + r.sicil : ''}</small><br>
-                    <small style="color:#aaa">${r.project}</small>
-                </td>
-                <td>${r.type}<br><i>${r.reason}</i><br>${formatDate(r.start)} - ${formatDate(r.end)}</td>
-                <td>
-                    <button class="action-btn btn-approve" onclick="processRequest('${r.id}', 'Onaylandı')">Onayla</button>
-                    <button class="action-btn btn-reject" onclick="processRequest('${r.id}', 'Reddedildi')">Reddet</button>
-                </td>
-            </tr>`).join('');
-    }
-}
-
-async function processRequest(id, decision) {
-    if (!confirm('İşlemi uygulamak istiyor musunuz?')) return;
-    await callApi({ action: 'updateStatus' }, 'POST', { id: id, role: currentUser.role, decision: decision });
-    alert('İşlem yapıldı.');
-    loadRequests();
 }
 
 function showTab(tabId, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-new-request').style.display = 'none';
-    document.getElementById('tab-my-requests').style.display = 'none';
-    document.getElementById(tabId).style.display = 'block';
-    if (tabId === 'my-requests') loadRequests();
+    document.getElementById('tab-new-req').classList.add('hidden');
+    document.getElementById('tab-my-req').classList.add('hidden');
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+    if (tabId === 'my-req') loadMyRequests();
 }
 
-function formatDate(d) { return d ? d.split('T')[0] : '-'; }
-function getStatusClass(s) { return s === 'Onaylandı' ? 'status-approved' : (s.includes('Red') ? 'status-rejected' : 'status-pending'); }
+async function submitRequest(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.innerText = 'Gönderiliyor...';
+
+    const data = {
+        action: 'createRequest',
+        requester: currentUser.user,
+        fullName: document.getElementById('fullname').value,
+        sicil: document.getElementById('sicil').value,
+        project: currentUser.project, // Auto-filled from session
+        type: document.getElementById('type').value,
+        startDate: document.getElementById('start').value,
+        endDate: document.getElementById('end').value,
+        reason: document.getElementById('reason').value
+    };
+
+    const res = await callApi({ action: 'createRequest' }, 'POST', data);
+
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', 'İzin talebi iletildi.', 'success');
+        e.target.reset();
+        showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
+    } else {
+        Swal.fire('Hata', 'Bir sorun oluştu: ' + res.message, 'error');
+    }
+    btn.disabled = false; btn.innerText = 'Talebi Gönder';
+}
+
+async function loadMyRequests() {
+    const tbody = document.querySelector('#rep-table tbody');
+    const data = await callApi({ action: 'getRequests', role: 'Temsilci', user: currentUser.user });
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="color:#94a3b8; text-align:center;">Henüz talep yok.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.map(r => `
+        <tr>
+            <td>${formatDate(r.start)}<br><small>${r.type}</small></td>
+            <td>${getStatusBadge(r.status)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadAdminRequests() {
+    const tbody = document.querySelector('#admin-table tbody');
+    // Admin request loads with PROJECT filtering handled by backend
+    const data = await callApi({ action: 'getRequests', role: currentUser.role, user: currentUser.user, project: currentUser.project });
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:#94a3b8; text-align:center;">Onay bekleyen talep yok.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.map(r => `
+        <tr>
+            <td>
+                <strong>${r.fullName || r.requester}</strong><br>
+                <small>${r.project}</small> ${r.sicil ? '<small>(' + r.sicil + ')</small>' : ''}
+            </td>
+            <td>
+                ${r.type}<br>
+                <small style="font-style:italic; color:#64748b;">"${r.reason}"</small><br>
+                <small>${formatDate(r.start)} - ${formatDate(r.end)}</small>
+            </td>
+            <td>
+                <button class="action-btn approve" onclick="processRequest('${r.id}', 'Onaylandı')">✔</button>
+                <button class="action-btn reject" onclick="processRequest('${r.id}', 'Reddedildi')">✖</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function processRequest(id, decision) {
+    const { isConfirmed } = await Swal.fire({
+        title: decision === 'Onaylandı' ? 'Onayla?' : 'Reddet?',
+        text: 'Bu işlemi yapmak istediğinize emin misiniz?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: decision === 'Onaylandı' ? '#22c55e' : '#ef4444',
+        confirmButtonText: 'Evet',
+        cancelButtonText: 'Hayır'
+    });
+
+    if (!isConfirmed) return;
+
+    await callApi({ action: 'updateStatus' }, 'POST', { id: id, role: currentUser.role, decision: decision });
+    Swal.fire('Tamamlandı', 'İşlem başarılı.', 'success');
+    loadAdminRequests();
+}
+
+function getStatusBadge(code) {
+    const map = {
+        'tl_bekliyor': { label: 'TL Onayı Bekliyor', class: 'st-tl_bekliyor' },
+        'spv_bekliyor': { label: 'SPV Onayı Bekliyor', class: 'st-spv_bekliyor' },
+        'ik_bekliyor': { label: 'İK Onayı Bekliyor', class: 'st-ik_bekliyor' },
+        'onaylandi': { label: 'Onaylandı', class: 'st-onaylandi' },
+        'red': { label: 'Reddedildi', class: 'st-red' }
+    };
+    const s = map[code] || { label: code, class: '' };
+    return `<span class="status ${s.class}">${s.label}</span>`;
+}
+
+function formatDate(d) {
+    if (!d) return '-';
+    // Google Sheets returns UTC string sometimes, simplify
+    return d.split('T')[0].split('-').reverse().join('.');
+}
