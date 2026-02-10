@@ -1,7 +1,8 @@
 /* 
-  app.js (Frontend Logic)
-  Visual: Clean Card Design
-  Features: 3-Stage Approval, Project Isolation, Name/Surname Input
+  app.js (LocalStorage & Name Filtering Update)
+  - Remembers Ad Soyad/Sicil in browser.
+  - Fixes "stuck" loading by forcing JSON parsing checks.
+  - Filters request history by local user name.
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
@@ -16,7 +17,7 @@ function switchView(viewName) {
         loginView.classList.remove('hidden');
         dashboardView.classList.add('hidden');
         userInfo.classList.add('hidden');
-        document.body.style.background = "#f1f5f9"; // Reset background
+        document.body.style.background = "#f1f5f9";
     } else {
         loginView.classList.add('hidden');
         dashboardView.classList.remove('hidden');
@@ -37,9 +38,16 @@ async function callApi(params, method = 'GET', body = null) {
 
     try {
         const res = await fetch(url, options);
-        return await res.json();
+        // Bazen GAS HTML döner, kontrol edelim
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error("API Raw Response:", text);
+            return { status: 'error', message: 'Sunucudan geçersiz yanıt geldi. İşlem yapılmış olabilir sayfayı yenileyin.' };
+        }
     } catch (e) {
-        Swal.fire('Hata', 'Sunucu bağlantı hatası', 'error');
+        Swal.fire('Hata', 'Sunucu bağlantı hatası: ' + e, 'error');
         return { status: 'error' };
     }
 }
@@ -74,10 +82,9 @@ function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
 
     if (role === 'Temsilci') {
-        // --- TEMSİLCİ PANELİ ---
         container.innerHTML = `
             <div class="panel-info">
-                👋 <strong>Hoş Geldiniz!</strong> Projeniz: <b>${currentUser.project}</b>. Yeni izin talebi oluşturabilir veya durumunu sorgulayabilirsiniz.
+                👋 <strong>Hoş Geldiniz!</strong> Projeniz: <b>${currentUser.project}</b>.
             </div>
 
             <div class="tabs">
@@ -125,24 +132,31 @@ function renderDashboard(role) {
             </div>
 
             <div id="tab-my-req" class="hidden">
+                <div style="margin-bottom:10px; color:#64748b; font-size:0.9em;">
+                    ℹ️ Sadece <b><span id="filter-name-display">-</span></b> adına ait kayıtlar gösterilmektedir.
+                </div>
                 <table id="rep-table">
                     <thead><tr><th>Tarih</th><th>Durum</th></tr></thead>
                     <tbody><tr><td colspan="2">Yükleniyor...</td></tr></tbody>
                 </table>
             </div>
         `;
-        loadMyRequests();
+
+        // --- LOCAL STORAGE'DAN BİLGİLERİ ÇEK ---
+        const savedName = localStorage.getItem('mtd_fullname');
+        const savedSicil = localStorage.getItem('mtd_sicil');
+
+        if (savedName) document.getElementById('fullname').value = savedName;
+        if (savedSicil) document.getElementById('sicil').value = savedSicil;
+
     } else {
-        // --- YÖNETİCİ PANELİ (TL, SPV, İK) ---
+        // YÖNETİCİ
         let badgeColor = role === 'TL' ? '#fff7ed' : (role === 'SPV' ? '#fdf4ff' : '#f5f3ff');
         let badgeText = role === 'TL' ? '#c2410c' : (role === 'SPV' ? '#86198f' : '#6d28d9');
 
         container.innerHTML = `
             <div class="panel-info" style="background:${badgeColor}; color:${badgeText}; border-left-color:${badgeText};">
-                🛡️ <strong>${role} Paneli:</strong> 
-                ${role === 'TL' ? 'Personel izinlerini onaylayıp SPV\'ye iletin.' : ''}
-                ${role === 'SPV' ? 'TL onaylı izinleri kontrol edip İK\'ya iletin.' : ''}
-                ${role === 'İK' ? 'Son onay merci.' : ''}
+                🛡️ <strong>${role} Paneli:</strong>
             </div>
             
             <h3>Onay Bekleyenler</h3>
@@ -170,12 +184,20 @@ async function submitRequest(e) {
     const btn = e.target.querySelector('button');
     btn.disabled = true; btn.innerText = 'Gönderiliyor...';
 
+    // Form Verileri
+    const fName = document.getElementById('fullname').value.trim();
+    const fSicil = document.getElementById('sicil').value.trim();
+
+    // --- LOCAL STORAGE KAYIT ---
+    localStorage.setItem('mtd_fullname', fName);
+    localStorage.setItem('mtd_sicil', fSicil);
+
     const data = {
         action: 'createRequest',
         requester: currentUser.user,
-        fullName: document.getElementById('fullname').value,
-        sicil: document.getElementById('sicil').value,
-        project: currentUser.project, // Auto-filled from session
+        fullName: fName,
+        sicil: fSicil,
+        project: currentUser.project,
         type: document.getElementById('type').value,
         startDate: document.getElementById('start').value,
         endDate: document.getElementById('end').value,
@@ -187,6 +209,11 @@ async function submitRequest(e) {
     if (res.status === 'success') {
         Swal.fire('Başarılı', 'İzin talebi iletildi.', 'success');
         e.target.reset();
+
+        // Resetledikten sonra isimleri tekrar koy ki yeniden yazmasın
+        document.getElementById('fullname').value = fName;
+        document.getElementById('sicil').value = fSicil;
+
         showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
     } else {
         Swal.fire('Hata', 'Bir sorun oluştu: ' + res.message, 'error');
@@ -196,7 +223,13 @@ async function submitRequest(e) {
 
 async function loadMyRequests() {
     const tbody = document.querySelector('#rep-table tbody');
-    const data = await callApi({ action: 'getRequests', role: 'Temsilci', user: currentUser.user });
+
+    // Filtreleme için Local'deki ismi kullan
+    const filterName = document.getElementById('fullname').value.trim() || localStorage.getItem('mtd_fullname') || '';
+    document.getElementById('filter-name-display').innerText = filterName || "Hepsini";
+
+    // İsmi backend'e gönderiyoruz, orada filtreliyor
+    const data = await callApi({ action: 'getRequests', role: 'Temsilci', user: currentUser.user, filterName: filterName });
 
     if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="2" style="color:#94a3b8; text-align:center;">Henüz talep yok.</td></tr>';
@@ -213,7 +246,6 @@ async function loadMyRequests() {
 
 async function loadAdminRequests() {
     const tbody = document.querySelector('#admin-table tbody');
-    // Admin request loads with PROJECT filtering handled by backend
     const data = await callApi({ action: 'getRequests', role: currentUser.role, user: currentUser.user, project: currentUser.project });
 
     if (!data || data.length === 0) {
@@ -272,6 +304,5 @@ function getStatusBadge(code) {
 
 function formatDate(d) {
     if (!d) return '-';
-    // Google Sheets returns UTC string sometimes, simplify
     return d.split('T')[0].split('-').reverse().join('.');
 }
