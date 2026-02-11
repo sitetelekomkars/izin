@@ -676,20 +676,20 @@ function renderPage(page) {
         if (s === 'Bekliyor' && role === 'TL') {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else if (s === 'spv_bekliyor' && role === 'SPV') {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else {
             actionHtml = s === 'red'
