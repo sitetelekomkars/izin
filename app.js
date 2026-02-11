@@ -215,6 +215,15 @@ function renderDashboard(role) {
                 </table>
             </div>
         `;
+
+        // OTOMATIK DOLDURMA: localStorage'dan isim ve sicil çek
+        setTimeout(() => {
+            const savedFullname = localStorage.getItem('mtd_fullname');
+            const savedSicil = localStorage.getItem('mtd_sicil');
+            if (savedFullname) document.getElementById('fullname').value = savedFullname;
+            if (savedSicil) document.getElementById('sicil').value = savedSicil;
+        }, 100);
+
         return;
     }
 
@@ -682,7 +691,8 @@ window.showTab = (id, bt) => {
 }
 
 async function loadMyRequests() {
-    // LocalStorage'dan sicil bilgisini al
+    // LocalStorage'dan kaydedilmiş bilgileri al
+    const savedFullname = localStorage.getItem('mtd_fullname');
     const savedSicil = localStorage.getItem('mtd_sicil');
 
     const res = await callApi({
@@ -698,9 +708,25 @@ async function loadMyRequests() {
         return;
     }
 
-    // Sicil numarasına göre filtrele (eğer varsa)
     let myRequests = res;
-    if (savedSicil) {
+
+    // AKILLI FİLTRELEME
+    if (savedFullname) {
+        // Önce isim-soyad ile filtrele
+        const byName = res.filter(r => r.fullName === savedFullname);
+
+        if (byName.length > 1 && savedSicil) {
+            // Aynı isimde birden fazla kişi var, sicil ile daralt
+            myRequests = byName.filter(r => r.sicil === savedSicil);
+        } else if (byName.length > 0) {
+            // Tek kişi veya sicil yok, isimle yetinelim
+            myRequests = byName;
+        } else if (savedSicil) {
+            // İsim eşleşmedi, sicil dene
+            myRequests = res.filter(r => r.sicil === savedSicil);
+        }
+    } else if (savedSicil) {
+        // Sadece sicil var
         myRequests = res.filter(r => r.sicil === savedSicil);
     }
 
@@ -717,7 +743,6 @@ async function loadMyRequests() {
         if (r.status === 'onaylandi') {
             statusHtml = '<span class="status st-onaylandi">✅ Onaylandı</span>';
         } else if (r.status === 'red') {
-            // RED NEDENİNİ DETAYLI GÖSTER
             const rejInfo = getDetailedRejectionInfo(r);
             statusHtml = `
                 <span class="status st-red">❌ Reddedildi</span><br>
