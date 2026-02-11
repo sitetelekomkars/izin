@@ -438,6 +438,13 @@ window.openUserMgmtModal = function () {
                     <label>Proje/Grup</label>
                     <input type="text" id="new-u-proj" class="swal2-input" placeholder="Proje adı">
                 </div>
+                <div class="form-group">
+                    <label>Güvenlik (2FA)</label>
+                    <select id="new-u-2fa" class="swal2-input">
+                        <option value="PASİF">🔴 Kapalı (Sadece Şifre)</option>
+                        <option value="AKTİF">🟢 Açık (Authenticator Kod)</option>
+                    </select>
+                </div>
             ` : `
                 <div class="alert-info">ℹ️ Sadece kendi grubunuza TL ekleyebilirsiniz.</div>
             `}
@@ -488,6 +495,7 @@ window.loadUserListInternal = async function () {
                     <th style="padding:10px;">Kullanıcı</th>
                     <th style="padding:10px;">Rol</th>
                     <th style="padding:10px;">Proje</th>
+                    <th style="padding:10px;">2FA</th>
                     <th style="padding:10px;">İşlem</th>
                 </tr>
             </thead>
@@ -501,8 +509,16 @@ window.loadUserListInternal = async function () {
                 <td style="padding:10px;">${esc(u.role)}</td>
                 <td style="padding:10px;">${esc(u.project)}</td>
                 <td style="padding:10px;">
-                    <button onclick="resetPass('${esc(u.user)}')" class="action-btn" style="background:#f59e0b; width:auto; padding:5px 10px;">🔑</button>
-                    ${isIk ? `<button onclick="delUser('${esc(u.user)}')" class="action-btn reject" style="width:auto; padding:5px 10px; margin-left:5px;">🗑️</button>` : ''}
+                    <span style="color: ${u.twoFactor === 'AKTİF' ? '#059669' : '#dc2626'}; font-weight:bold; font-size:0.75rem;">
+                        ${u.twoFactor === 'AKTİF' ? 'AÇIK' : 'KAPALI'}
+                    </span>
+                </td>
+                <td style="padding:10px;">
+                    <button onclick="resetPass('${esc(u.user)}')" title="Şifre Sıfırla" class="action-btn" style="background:#f59e0b; width:auto; padding:5px 10px;">🔑</button>
+                    ${isIk ? `
+                        <button onclick="toggle2faStatus('${esc(u.user)}', '${u.twoFactor === 'AKTİF' ? 'PASİF' : 'AKTİF'}')" title="2FA Değiştir" class="action-btn" style="background:#6366f1; width:auto; padding:5px 10px; margin-left:5px;">🛡️</button>
+                        <button onclick="delUser('${esc(u.user)}')" title="Kullanıcı Sil" class="action-btn reject" style="width:auto; padding:5px 10px; margin-left:5px;">🗑️</button>
+                    ` : ''}
                 </td>
             </tr>
         `;
@@ -523,7 +539,8 @@ window.submitAddUser = async function () {
         action: 'addUser',
         newUser: u,
         newRole: r,
-        newProject: p
+        newProject: p,
+        new2fa: document.getElementById('new-u-2fa')?.value || 'PASİF'
     });
 
     if (res.status === 'success') Swal.fire('Başarılı', 'Kullanıcı eklendi', 'success');
