@@ -747,9 +747,14 @@ window.searchMyHistory = async function () {
 
     let myRequests = res;
 
-    // FİLTRELEME
+    // FİLTRELEME (Türkçe uyumlu, büyük/küçük harf duyarsız)
     if (searchFullname) {
-        const byName = res.filter(r => r.fullName && r.fullName.toLowerCase().includes(searchFullname.toLowerCase()));
+        const byName = res.filter(r => {
+            if (!r.fullName) return false;
+            const searchLower = searchFullname.toLocaleLowerCase('tr-TR');
+            const nameLower = r.fullName.toLocaleLowerCase('tr-TR');
+            return nameLower.includes(searchLower);
+        });
 
         if (byName.length > 1 && searchSicil) {
             myRequests = byName.filter(r => r.sicil === searchSicil);
