@@ -26,6 +26,7 @@ function initDashboardWithUser(user) {
 
     const mgmtLink = document.getElementById('menu-mgmt');
     const logsLink = document.getElementById('menu-logs');
+    const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
     if (user.role === 'Temsilci') passLink.style.display = 'none';
@@ -33,11 +34,17 @@ function initDashboardWithUser(user) {
 
     if (user.role === 'İK' || user.role === 'IK' || user.role === 'SPV') {
         mgmtLink.style.display = 'block';
-        if (user.role.startsWith('İK') || user.role === 'IK') logsLink.style.display = 'block';
-        else logsLink.style.display = 'none';
+        if (user.role.startsWith('İK') || user.role === 'IK') {
+            logsLink.style.display = 'block';
+            reportLink.style.display = 'block'; // İK'ya özel rapor
+        } else {
+            logsLink.style.display = 'none';
+            reportLink.style.display = 'none';
+        }
     } else {
         mgmtLink.style.display = 'none';
         logsLink.style.display = 'none';
+        reportLink.style.display = 'none';
     }
 
     renderDashboard(user.role);
@@ -875,3 +882,179 @@ window.toggleUserMenu = toggleUserMenu;
 window.submitRequest = submitRequest;
 window.applyFilters = applyFilters;
 window.changePage = changePage;
+
+/* === SİSTEM LOGLARI === */
+window.openSystemLogs = async function () {
+    Swal.fire({
+        title: '📋 Sistem Logları',
+        html: '<div style="text-align:center; padding:20px;">⏳ Loglar yükleniyor...</div>',
+        width: 900,
+        showConfirmButton: false,
+        showCloseButton: true
+    });
+
+    const logs = await callApi({
+        action: 'getLogs',
+        targetUser: '' // Tüm loglar
+    });
+
+    if (!logs || logs.length === 0) {
+        Swal.update({
+            html: '<div style="text-align:center; padding:40px; color:#999;">📭 Henüz log kaydı yok</div>'
+        });
+        return;
+    }
+
+    let tableHtml = `
+        <div style="max-height:500px; overflow-y:auto; text-align:left;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead style="position:sticky; top:0; background:#f8f9fa; z-index:10;">
+                    <tr>
+                        <th style="padding:12px; border-bottom:2px solid #dee2e6; text-align:left;">Tarih</th>
+                        <th style="padding:12px; border-bottom:2px solid #dee2e6; text-align:left;">Kullanıcı</th>
+                        <th style="padding:12px; border-bottom:2px solid #dee2e6; text-align:left;">Rol</th>
+                        <th style="padding:12px; border-bottom:2px solid #dee2e6; text-align:left;">İşlem</th>
+                        <th style="padding:12px; border-bottom:2px solid #dee2e6; text-align:left;">Detay</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    logs.forEach(log => {
+        tableHtml += `
+            <tr style="border-bottom:1px solid #f0f0f0;">
+                <td style="padding:10px; white-space:nowrap;">${log.time}</td>
+                <td style="padding:10px;"><b>${log.user}</b></td>
+                <td style="padding:10px;"><span class="badge-project">${log.role}</span></td>
+                <td style="padding:10px;">${log.type}</td>
+                <td style="padding:10px; color:#666;">${log.detail}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += '</tbody></table></div>';
+
+    Swal.update({ html: tableHtml });
+}
+
+/* === EXCEL RAPOR === */
+window.openReportModal = async function () {
+    const monthOptions = getMonthOptions()
+        .map(m => `<option value="${m.val}">${m.label}</option>`).join('');
+
+    const html = `
+        <div style="text-align:left;">
+            <div class="form-group">
+                <label>📅 Rapor Dönemi Seçin</label>
+                <select id="report-month" class="swal2-input" style="width:100%;">
+                    <option value="">Tüm Aylar</option>
+                    ${monthOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>📋 Durum Filtresi</label>
+                <select id="report-status" class="swal2-input" style="width:100%;">
+                    <option value="">Tümü</option>
+                    <option value="onaylandi">✅ Onaylananlar</option>
+                    <option value="red">❌ Reddedilenler</option>
+                    <option value="bekliyor">⏳ Bekleyenler</option>
+                </select>
+            </div>
+            <button onclick="generateExcelReport()" class="btn-primary" style="width:100%; margin-top:20px;">
+                📥 Excel Raporu İndir
+            </button>
+        </div>
+    `;
+
+    Swal.fire({
+        title: '📊 İzin Talepleri Raporu',
+        html: html,
+        width: 500,
+        showConfirmButton: false,
+        showCloseButton: true
+    });
+}
+
+window.generateExcelReport = async function () {
+    const month = document.getElementById('report-month').value;
+    const status = document.getElementById('report-status').value;
+
+    Swal.fire({
+        title: 'Rapor Hazırlanıyor...',
+        html: '⏳ Veriler toplanıyor...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    // Tüm talepleri çek
+    const allReqs = await callApi({
+        action: 'getRequests',
+        role: currentUser.role,
+        user: currentUser.user,
+        project: currentUser.project
+    });
+
+    if (!allReqs || allReqs.length === 0) {
+        Swal.fire('Uyarı', 'Rapor için veri bulunamadı', 'warning');
+        return;
+    }
+
+    // Filtreleme
+    let filtered = allReqs.filter(r => {
+        if (month) {
+            const d = new Date(r.start);
+            const rMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (rMonth !== month) return false;
+        }
+        if (status) {
+            if (status === 'bekliyor') {
+                if (!['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(r.status)) return false;
+            } else if (r.status !== status) {
+                return false;
+            }
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        Swal.fire('Uyarı', 'Seçilen kriterlere uygun kayıt bulunamadı', 'warning');
+        return;
+    }
+
+    // Excel formatında veri hazırla
+    let csv = 'AD SOYAD,SİCİL NO,PROJE,İZİN TÜRÜ,BAŞLANGIÇ,BİTİŞ,GÜN SAYISI,GEREKÇE,DURUM,TL ONAY,SPV ONAY,İK ONAY\n';
+
+    filtered.forEach(r => {
+        const days = calculateDays(r.start, r.end);
+        const statusText = {
+            'onaylandi': 'Onaylandı',
+            'red': 'Reddedildi',
+            'tl_bekliyor': 'TL Bekliyor',
+            'spv_bekliyor': 'SPV Bekliyor',
+            'ik_bekliyor': 'İK Bekliyor'
+        }[r.status] || r.status;
+
+        csv += `"${r.fullName}","${r.sicil}","${r.project}","${r.type}","${r.start}","${r.end}","${days}","${r.reason || '-'}","${statusText}","${r.tl || '-'}","${r.spv || '-'}","${r.ik || '-'}"\n`;
+    });
+
+    // Dosya olarak indir
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const fileName = `izin_raporu_${month || 'tum_aylar'}_${new Date().getTime()}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Rapor Hazır!',
+        html: `<b>${filtered.length}</b> kayıt Excel dosyasına aktarıldı<br><small>${fileName}</small>`,
+        timer: 3000
+    });
+}
+
