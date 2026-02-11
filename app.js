@@ -3,7 +3,31 @@
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
-let currentUser = null;
+// --- iOS PWA YÜKLEME KONTROLÜ ---
+function isIos() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isInStandaloneMode() {
+    return ('standalone' in window.navigator) && (window.navigator.standalone);
+}
+
+function checkIosPrompt() {
+    if (isIos() && !isInStandaloneMode()) {
+        const prompt = document.getElementById('ios-prompt');
+        if (prompt) prompt.style.display = 'block';
+    }
+}
+
+function closeIosPrompt() {
+    const prompt = document.getElementById('ios-prompt');
+    if (prompt) prompt.style.display = 'none';
+}
+
+window.addEventListener('load', () => {
+    checkIosPrompt();
+    // Mevcut init işlemleri devam eder...
+});
 let allAdminRequests = [];
 let filteredRequests = [];
 let currentPage = 1;
