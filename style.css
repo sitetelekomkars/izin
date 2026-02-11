@@ -1,322 +1,166 @@
-/* Light Theme Layout - Ref: izin-sistemi (GÜNCELLENMİŞ) */
-:root {
-    --primary: #2563eb;
-    --bg: #f1f5f9;
-    --ik-color: #7c3aed;
-    --header-text: #1e293b;
-    --card-bg: #ffffff;
-}
+/* 
+  style.css (Split Screen Login & Full Layout)
+*/
+:root { --primary: #0056b3; --primary-hover: #004494; --text-color: #333; --bg-light: #f8f9fa; --danger: #dc3545; }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light); color: var(--text-color); height: 100vh; overflow-x: hidden; }
 
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: var(--bg);
-    margin: 0;
-    padding: 20px;
-    color: #334155;
-}
-
-.app-container {
-    max-width: 1100px;
-    margin: 0 auto;
-    position: relative;
-    min-height: 80vh;
-}
-
-/* Header & Logo */
-.header-area {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    /* Sağa yaslama için */
-    gap: 15px;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #e2e8f0;
-    flex-wrap: wrap;
-    /* Mobilde taşmasın */
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.logo-img {
-    height: 50px;
-    width: auto;
-}
-
-.header-title {
-    color: var(--header-text);
-    margin: 0;
-    font-size: 1.8em;
-}
-
-/* Çıkış ve Kullanıcı Bilgisi */
-.user-info {
-    font-size: 0.9em;
-    display: flex;
-    gap: 15px;
-    align-items: center;
-    background: white;
-    padding: 5px 15px;
-    border-radius: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.user-name-span {
-    font-weight: bold;
-    color: var(--primary);
-}
-
-.btn-logout {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: 0.2s;
-}
-
-.btn-logout:hover {
-    background: #ef4444;
-    color: white;
-}
-
-/* Login Container */
+/* --- LOGIN VIEW (SPLIT SCREEN) --- */
 .login-view {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 60vh;
+    width: 100%;
+    height: 100vh;
 }
 
-.login-card {
+.login-left {
+    flex: 6; /* Sol taraf biraz daha geniş olabilir veya 50-50 */
+    background: url('favicon.png') no-repeat center center;
+    background-size: cover;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Sol taraftaki resmin üzerine hafif koyu filtre */
+.login-left::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.login-right {
+    flex: 4;
     background: white;
-    padding: 40px;
-    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.05); /* Sol tarafa gölge */
+    position: relative;
+    z-index: 10;
+}
+
+.auth-container {
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
     text-align: center;
-    /* Gölge arttırıldı */
 }
 
-.login-card h2 {
-    color: var(--primary);
-    margin-bottom: 20px;
+.login-logo {
+    max-width: 250px;
+    margin-bottom: 2rem;
 }
 
-/* Dashboard Container */
-.dashboard-view {
+.auth-container h1 {
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+}
+
+/* Form Styles */
+.form-group { margin-bottom: 1.2rem; text-align: left; }
+label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #495057; font-size: 0.9rem; }
+input, select, textarea { 
+    width: 100%; 
+    padding: 0.8rem 1rem; 
+    border: 1px solid #ced4da; 
+    border-radius: 8px; /* Daha yumuşak köşe */
+    font-size: 1rem; 
+    background: #fdfdfd; 
+    transition: all 0.3s;
+}
+input:focus { 
+    border-color: var(--primary); 
+    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1); 
+    outline: none; 
+}
+
+.btn-primary { 
+    width: 100%; 
+    padding: 14px; 
+    background: var(--primary); 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    font-size: 1rem; 
+    margin-top: 1rem;
+    transition: background 0.2s; 
+}
+.btn-primary:hover { background: var(--primary-hover); }
+
+/* --- DASHBOARD VIEW & LAYOUT --- */
+.app-container {
+    width: 100%;
+}
+
+.header-area {
     background: white;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 30px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 0; /* Dashboard padding ile halledeğiz */
+}
+
+.dashboard-view {
     padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* Forms */
-.form-group {
-    margin-bottom: 15px;
-    text-align: left;
+.user-info { 
+    font-size: 0.9rem; display:flex; gap:15px; align-items:center; 
+}
+.btn-logout { 
+    background: #fee2e2; color: #b91c1c; border:none; padding: 6px 15px; 
+    border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem;
 }
 
-label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 5px;
-    color: #334155;
+/* Tabs & Status Badges */
+.tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; }
+.tab-btn { 
+    padding: 10px 25px; border: none; background: transparent; color: #6c757d; 
+    cursor: pointer; font-weight: 600; border-radius: 6px 6px 0 0; 
 }
+.tab-btn.active { background: white; color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -2px; }
 
-input,
-select,
-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 1em;
-}
+table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+th { background: #f8f9fa; color: #495057; font-weight: 600; padding: 15px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; border-bottom: 1px solid #e9ecef; }
+td { padding: 15px; border-bottom: 1px solid #f1f3f5; font-size: 0.95rem; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
 
-input:focus,
-select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
+.status { padding: 6px 12px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; display: inline-block; letter-spacing: 0.3px; }
+.st-tl_bekliyor { background: #fff3cd; color: #856404; }
+.st-spv_bekliyor { background: #e2e3e5; color: #383d41; }
+.st-ik_bekliyor { background: #d1ecf1; color: #0c5460; }
+.st-onaylandi { background: #d4edda; color: #155724; }
+.st-red { background: #f8d7da; color: #721c24; }
 
-/* Date input düzeltme */
-input[type="date"] {
-    font-family: inherit;
-}
+/* Helpers */
+.hidden { display: none !important; }
+.panel-info { background: white; border-left: 4px solid var(--primary); padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 25px; }
+.action-btn { padding: 6px 10px; border-radius: 6px; border:none; color:white; font-weight:bold; cursor:pointer; margin-right:5px;}
+.approve { background: #28a745; }
+.reject { background: #dc3545; }
 
-.btn-primary {
-    width: 100%;
-    padding: 14px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 1.1em;
-    transition: 0.3s;
-}
+/* Animasyon */
+.animate-fade { animation: fadeIn 0.5s ease-in-out; }
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
 
-.btn-primary:hover {
-    background: #1d4ed8;
-}
-
-.btn-primary:disabled {
-    background: #94a3b8;
-    cursor: not-allowed;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 10px;
-}
-
-.tab-btn {
-    padding: 10px 20px;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 1em;
-    border-radius: 6px;
-    transition: 0.2s;
-}
-
-.tab-btn:hover {
-    background: #f8fafc;
-    color: #334155;
-}
-
-.tab-btn.active {
-    background: #eff6ff;
-    color: var(--primary);
-}
-
-/* Table */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-th,
-td {
-    text-align: left;
-    padding: 12px;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 0.95em;
-    vertical-align: top;
-}
-
-th {
-    background: #f8fafc;
-    color: #64748b;
-    text-transform: uppercase;
-    font-size: 0.85em;
-}
-
-tr:last-child td {
-    border-bottom: none;
-}
-
-/* Status Badges */
-.status {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 0.75em;
-    font-weight: 800;
-    display: inline-block;
-}
-
-.st-tl_bekliyor {
-    background: #fff7ed;
-    color: #c2410c;
-    border: 1px solid #ffedd5;
-}
-
-.st-spv_bekliyor {
-    background: #fdf4ff;
-    color: #86198f;
-    border: 1px solid #fae8ff;
-}
-
-.st-ik_bekliyor {
-    background: #f5f3ff;
-    color: #6d28d9;
-    border: 1px solid #ede9fe;
-}
-
-.st-onaylandi {
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #dcfce7;
-}
-
-.st-red {
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fee2e2;
-}
-
-/* Utils */
-.hidden {
-    display: none !important;
-}
-
-.action-btn {
-    padding: 8px 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    color: white;
-    margin-right: 5px;
-    transition: transform 0.1s;
-}
-
-.action-btn:active {
-    transform: scale(0.95);
-}
-
-.approve {
-    background: #22c55e;
-}
-
-.approve:hover {
-    background: #16a34a;
-}
-
-.reject {
-    background: #ef4444;
-}
-
-.reject:hover {
-    background: #dc2626;
-}
-
-.panel-info {
-    background: #eff6ff;
-    padding: 15px;
-    border-radius: 8px;
-    color: #1e40af;
-    margin-bottom: 20px;
-    border-left: 5px solid #2563eb;
+/* Mobile */
+@media (max-width: 768px) {
+    .login-left { display: none; }
+    .login-right { flex: 1; }
+    .header-area { flex-direction: column; gap:10px; }
+    .user-info { width: 100%; justify-content: space-between; }
 }
