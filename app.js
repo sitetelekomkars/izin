@@ -745,6 +745,31 @@ async function submitRequest(e) {
     }
 }
 
+/* === API CALL (IP/DOMAIN DESTEKLİ) === */
+async function callApi(body = {}) {
+    if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
+
+    // Hangi siteden bağlanıyor bilgisini ekle
+    body.clientInfo = window.location.hostname;
+
+    const options = {
+        method: 'POST',
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+    };
+
+    try {
+        const res = await fetch(API_URL, options);
+        const json = await res.json();
+        if (json.status === 'error' && json.message && json.message.includes('token')) {
+            logout();
+            Swal.fire('Oturum Kapandı', 'Lütfen tekrar giriş yapın.', 'info');
+        }
+        return json;
+    } catch (e) { return { status: 'error', message: 'Sunucu hatası.' }; }
+}
+
 /* === WINDOW BINDINGS === */
 window.handleLogin = handleLogin;
 window.logout = logout;
@@ -761,30 +786,30 @@ window.showTab = function (id, btn) {
     document.getElementById('tab-' + id).classList.remove('hidden');
 };
 
-/* === SİSTEM LOGLARI === */
+/* === SİSTEM LOGLARI (DETAYLI) === */
 window.openSystemLogs = async function () {
-    Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 900, showConfirmButton: false, showCloseButton: true });
+    Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
     const res = await callApi({ action: 'getLogs' });
-    if (res.status === 'error' || !Array.isArray(res)) {
-        Swal.update({ html: 'Loglar alınamadı.' }); return;
-    }
+    if (res.status === 'error' || !Array.isArray(res)) { Swal.update({ html: 'Loglar alınamadı.' }); return; }
+
     let tableHtml = `
         <div style="max-height:500px; overflow:auto; text-align:left;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                <thead style="background:#f8f9fa;">
-                    <tr><th>Tarih</th><th>Kullanıcı</th><th>Rol</th><th>Proje</th><th>İşlem</th><th>Detay</th></tr>
+            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                <thead style="background:#f8f9fa; position:sticky; top:0;">
+                    <tr><th>Tarih</th><th>Kullanıcı</th><th>Rol</th><th>Proje</th><th>İşlem</th><th>Detay</th><th>Domain/IP</th></tr>
                 </thead>
                 <tbody>
     `;
     res.forEach(log => {
         tableHtml += `
             <tr style="border-bottom:1px solid #f0f0f0;">
-                <td style="padding:8px;">${log.time}</td>
+                <td style="padding:8px; white-space:nowrap;">${log.time}</td>
                 <td style="padding:8px;"><b>${esc(log.user)}</b></td>
                 <td style="padding:8px;">${esc(log.role)}</td>
-                <td style="padding:8px;">${esc(log.domain)}</td>
+                <td style="padding:8px;">${esc(log.project)}</td>
                 <td style="padding:8px;">${esc(log.type)}</td>
                 <td style="padding:8px; color:#666;">${esc(log.detail)}</td>
+                <td style="padding:8px; font-family:monospace; color:#2563eb;">${esc(log.domain)}</td>
             </tr>
         `;
     });
