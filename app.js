@@ -779,27 +779,27 @@ window.searchMyHistory = async function () {
 
 async function submitRequest(e) {
     e.preventDefault();
-    const data = {
-        action: 'createRequest',
+    const formData = {
         fullName: document.getElementById('fullname').value,
-        sicil: document.getElementById('sicil').value,
+        project: document.getElementById('sicil').value, // 'sicil' id'li kutuda artık Proje yazıyor
         type: document.getElementById('type').value,
-        startDate: document.getElementById('start').value,
-        endDate: document.getElementById('end').value,
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value,
         reason: document.getElementById('reason').value
     };
 
-    localStorage.setItem('mtd_fullname', data.fullName);
-    localStorage.setItem('mtd_sicil', data.sicil);
+    localStorage.setItem('mtd_fullname', formData.fullName);
 
     Swal.showLoading();
-    const res = await callApi(data);
+    const res = await callApi({ action: 'submitRequest', formData });
+
     if (res.status === 'success') {
         Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
         document.getElementById('reason').value = '';
         document.getElementById('start').value = '';
         document.getElementById('end').value = '';
-        showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
+        // Taleplerim sekmesini göster ve orayı yenile (eğer varsa fonksiyona bağla)
+        if (typeof searchMyHistory === 'function') searchMyHistory();
     } else {
         Swal.fire('Hata', res.message || 'Gönderilemedi', 'error');
     }
