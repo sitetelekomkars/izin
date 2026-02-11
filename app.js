@@ -210,7 +210,7 @@ function renderDashboard(role) {
             </div>
             <div id="tab-my-req" class="hidden">
                 <table id="rep-table">
-                    <thead><tr><th>Tarih</th><th>Tür</th><th>Durum</th></tr></thead>
+                    <thead><tr><th>Tarih</th><th>Tür</th><th>Gerekçe</th><th>Durum</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -540,11 +540,15 @@ function renderPage(page) {
             `;
         } else {
             if (r.status === 'onaylandi') {
-                actionHtml = '<span class="status st-onaylandi">✓ Onaylandı</span>';
+                actionHtml = '<span class="status st-onaylandi">✅ Onaylandı</span>';
             } else if (r.status === 'red') {
-                const reason = getRejectionReason(r);
-                actionHtml = `<span class="status st-red">✖ Reddedildi</span>`;
-                if (reason) actionHtml += `<br><small style="color:#721c24;">${reason}</small>`;
+                const rejInfo = getDetailedRejectionInfo(r);
+                actionHtml = `
+                    <span class="status st-red">❌ Reddedildi</span><br>
+                    <small style="color:#721c24; display:block; margin-top:5px;">
+                        <b>${rejInfo.rejecter}</b>: ${rejInfo.reason}
+                    </small>
+                `;
             } else {
                 actionHtml = getStatusBadge(r.status);
             }
@@ -587,15 +591,30 @@ function calculateDays(start, end) {
     }
 }
 
-function getRejectionReason(r) {
-    if (r.status !== 'red') return null;
-    const checks = [r.ik, r.spv, r.tl];
-    for (const c of checks) {
-        if (c && c.toString().startsWith('Reddedildi:')) {
-            return c.replace('Reddedildi:', '').trim();
-        }
+function getDetailedRejectionInfo(r) {
+    if (r.status !== 'red') return { rejecter: '-', reason: '-' };
+
+    // Kim red etti kontrol et
+    if (r.ik && r.ik.toString().startsWith('Reddedildi:')) {
+        return {
+            rejecter: 'İK',
+            reason: r.ik.replace('Reddedildi:', '').trim()
+        };
     }
-    return null;
+    if (r.spv && r.spv.toString().startsWith('Reddedildi:')) {
+        return {
+            rejecter: 'SPV',
+            reason: r.spv.replace('Reddedildi:', '').trim()
+        };
+    }
+    if (r.tl && r.tl.toString().startsWith('Reddedildi:')) {
+        return {
+            rejecter: 'TL',
+            reason: r.tl.replace('Reddedildi:', '').trim()
+        };
+    }
+
+    return { rejecter: 'Bilinmiyor', reason: 'Red nedeni belirtilmemiş' };
 }
 
 function getStatusBadge(code) {
@@ -663,24 +682,58 @@ window.showTab = (id, bt) => {
 }
 
 async function loadMyRequests() {
+    // LocalStorage'dan sicil bilgisini al
+    const savedSicil = localStorage.getItem('mtd_sicil');
+
     const res = await callApi({
         action: 'getRequests',
         role: 'Temsilci',
         user: currentUser.user
     });
+
     const tbody = document.querySelector('#rep-table tbody');
+
     if (!res || res.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Henüz talebin yok</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">📭 Henüz talebin yok</td></tr>';
         return;
     }
-    tbody.innerHTML = res.map(r => {
-        const statusText = getStatusBadge(r.status);
+
+    // Sicil numarasına göre filtrele (eğer varsa)
+    let myRequests = res;
+    if (savedSicil) {
+        myRequests = res.filter(r => r.sicil === savedSicil);
+    }
+
+    if (myRequests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">📭 Kayıt bulunamadı</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = myRequests.map(r => {
         const dStart = new Date(r.start).toLocaleDateString('tr-TR');
         const dEnd = new Date(r.end).toLocaleDateString('tr-TR');
+
+        let statusHtml = '';
+        if (r.status === 'onaylandi') {
+            statusHtml = '<span class="status st-onaylandi">✅ Onaylandı</span>';
+        } else if (r.status === 'red') {
+            // RED NEDENİNİ DETAYLI GÖSTER
+            const rejInfo = getDetailedRejectionInfo(r);
+            statusHtml = `
+                <span class="status st-red">❌ Reddedildi</span><br>
+                <small style="color:#721c24; display:block; margin-top:5px;">
+                    <b>${rejInfo.rejecter}</b>: ${rejInfo.reason}
+                </small>
+            `;
+        } else {
+            statusHtml = getStatusBadge(r.status);
+        }
+
         return `<tr>
             <td>${dStart} - ${dEnd}</td>
-            <td>${r.type}</td>
-            <td>${statusText}</td>
+            <td><b>${r.type}</b></td>
+            <td>${r.reason || '-'}</td>
+            <td>${statusHtml}</td>
         </tr>`;
     }).join('');
 }
@@ -688,10 +741,17 @@ async function loadMyRequests() {
 async function submitRequest(e) {
     e.preventDefault();
 
+    const fullname = document.getElementById('fullname').value;
+    const sicil = document.getElementById('sicil').value;
+
+    // İsim ve sicili localStorage'a kaydet (gelecek kullanımlar için)
+    localStorage.setItem('mtd_fullname', fullname);
+    localStorage.setItem('mtd_sicil', sicil);
+
     const data = {
         requester: currentUser.user,
-        fullName: document.getElementById('fullname').value,
-        sicil: document.getElementById('sicil').value,
+        fullName: fullname,
+        sicil: sicil,
         project: currentUser.project,
         type: document.getElementById('type').value,
         startDate: document.getElementById('start').value,
@@ -709,10 +769,12 @@ async function submitRequest(e) {
 
     Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
 
+    // Formu temizle (sadece değişken alanlar)
     document.getElementById('reason').value = '';
     document.getElementById('start').value = '';
     document.getElementById('end').value = '';
 
+    // Geçmiş sekmesine geç
     showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
 }
 
