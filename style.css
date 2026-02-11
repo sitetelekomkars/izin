@@ -1,12 +1,26 @@
 /* 
-  style.css (Split Screen Login & Full Layout)
+  style.css (Admin Table Design & Badges)
 */
-:root { --primary: #0056b3; --primary-hover: #004494; --text-color: #333; --bg-light: #f8f9fa; --danger: #dc3545; }
+:root {
+    --primary: #0056b3;
+    --primary-hover: #004494;
+    --text-color: #333;
+    --bg-light: #f8f9fa;
+}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light); color: var(--text-color); height: 100vh; overflow-x: hidden; }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-/* --- LOGIN VIEW (SPLIT SCREEN) --- */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-light);
+    color: var(--text-color);
+    height: 100vh;
+}
+
 .login-view {
     display: flex;
     width: 100%;
@@ -14,20 +28,19 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light); color: 
 }
 
 .login-left {
-    flex: 6; /* Sol taraf biraz daha geniş olabilir veya 50-50 */
+    flex: 6;
     background: url('favicon.png') no-repeat center center;
     background-size: cover;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-/* Sol taraftaki resmin üzerine hafif koyu filtre */
 .login-left::after {
     content: '';
     position: absolute;
-    top: 0; left: 0; bottom: 0; right: 0;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
     background: rgba(0, 0, 0, 0.3);
 }
 
@@ -37,7 +50,7 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light); color: 
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: -5px 0 15px rgba(0,0,0,0.05); /* Sol tarafa gölge */
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
     position: relative;
     z-index: 10;
 }
@@ -54,113 +67,309 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light); color: 
     margin-bottom: 2rem;
 }
 
-.auth-container h1 {
-    font-size: 1.8rem;
-    color: #1a1a1a;
+.form-group {
+    margin-bottom: 1.2rem;
+    text-align: left;
+}
+
+label {
+    display: block;
+    font-weight: 600;
     margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 0.9rem;
 }
 
-.auth-subtitle {
-    color: #6c757d;
-    font-size: 0.95rem;
-    margin-bottom: 2rem;
-}
-
-/* Form Styles */
-.form-group { margin-bottom: 1.2rem; text-align: left; }
-label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #495057; font-size: 0.9rem; }
-input, select, textarea { 
-    width: 100%; 
-    padding: 0.8rem 1rem; 
-    border: 1px solid #ced4da; 
-    border-radius: 8px; /* Daha yumuşak köşe */
-    font-size: 1rem; 
-    background: #fdfdfd; 
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #fdfdfd;
     transition: all 0.3s;
 }
-input:focus { 
-    border-color: var(--primary); 
-    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1); 
-    outline: none; 
+
+input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(0, 86, 179, 0.1);
+    outline: none;
 }
 
-.btn-primary { 
-    width: 100%; 
-    padding: 14px; 
-    background: var(--primary); 
-    color: white; 
-    border: none; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    font-weight: 600; 
-    font-size: 1rem; 
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
     margin-top: 1rem;
-    transition: background 0.2s; 
+    transition: background 0.2s;
 }
-.btn-primary:hover { background: var(--primary-hover); }
 
-/* --- DASHBOARD VIEW & LAYOUT --- */
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
+/* --- DASHBOARD STYLES --- */
 .app-container {
     width: 100%;
 }
 
 .header-area {
     background: white;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 15px 30px;
     border-bottom: 1px solid #e9ecef;
-    margin-bottom: 0; /* Dashboard padding ile halledeğiz */
 }
 
 .dashboard-view {
     padding: 30px;
-    max-width: 1200px;
-    margin: 0 auto;
 }
 
-.user-info { 
-    font-size: 0.9rem; display:flex; gap:15px; align-items:center; 
+.user-info {
+    font-size: 0.9rem;
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
-.btn-logout { 
-    background: #fee2e2; color: #b91c1c; border:none; padding: 6px 15px; 
-    border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem;
+
+.btn-logout {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
 }
 
-/* Tabs & Status Badges */
-.tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; }
-.tab-btn { 
-    padding: 10px 25px; border: none; background: transparent; color: #6c757d; 
-    cursor: pointer; font-weight: 600; border-radius: 6px 6px 0 0; 
+.tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
 }
-.tab-btn.active { background: white; color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -2px; }
 
-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-th { background: #f8f9fa; color: #495057; font-weight: 600; padding: 15px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; border-bottom: 1px solid #e9ecef; }
-td { padding: 15px; border-bottom: 1px solid #f1f3f5; font-size: 0.95rem; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
+.tab-btn {
+    padding: 10px 25px;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    cursor: pointer;
+    font-weight: 600;
+}
 
-.status { padding: 6px 12px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; display: inline-block; letter-spacing: 0.3px; }
-.st-tl_bekliyor { background: #fff3cd; color: #856404; }
-.st-spv_bekliyor { background: #e2e3e5; color: #383d41; }
-.st-ik_bekliyor { background: #d1ecf1; color: #0c5460; }
-.st-onaylandi { background: #d4edda; color: #155724; }
-.st-red { background: #f8d7da; color: #721c24; }
+.tab-btn.active {
+    background: white;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+}
 
-/* Helpers */
-.hidden { display: none !important; }
-.panel-info { background: white; border-left: 4px solid var(--primary); padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 25px; }
-.action-btn { padding: 6px 10px; border-radius: 6px; border:none; color:white; font-weight:bold; cursor:pointer; margin-right:5px;}
-.approve { background: #28a745; }
-.reject { background: #dc3545; }
+/* --- NEW TABLE DESIGN --- */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-top: 20px;
+}
 
-/* Animasyon */
-.animate-fade { animation: fadeIn 0.5s ease-in-out; }
-@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+th {
+    text-align: left;
+    padding: 16px 20px;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+td {
+    padding: 16px 20px;
+    vertical-align: top;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 0.95rem;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background: #f8fbff;
+}
+
+/* BADGES */
+.badge-project {
+    display: inline-block;
+    background: #343a40;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+
+.badge-days {
+    background: #e7f5ff;
+    color: #228be6;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-left: 8px;
+}
+
+/* Status Badges */
+.status {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.st-tl_bekliyor {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Sarı */
+.st-spv_bekliyor {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+/* Gri */
+.st-ik_bekliyor {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Mavi */
+.st-onaylandi {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Yeşil */
+.st-red {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Kırmızı */
+
+/* Action Buttons */
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    margin-right: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.approve {
+    background: #22c55e;
+}
+
+.approve:hover {
+    background: #16a34a;
+}
+
+.reject {
+    background: #ef4444;
+}
+
+.reject:hover {
+    background: #dc2626;
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.page-btn {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #495057;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.panel-info {
+    background: white;
+    border-left: 4px solid var(--primary);
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    margin-bottom: 25px;
+}
+
+/* Fade In */
+.animate-fade {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
 
 /* Mobile */
 @media (max-width: 768px) {
-    .login-left { display: none; }
-    .login-right { flex: 1; }
-    .header-area { flex-direction: column; gap:10px; }
-    .user-info { width: 100%; justify-content: space-between; }
+    .login-left {
+        display: none;
+    }
+
+    .login-right {
+        flex: 1;
+    }
 }
