@@ -105,43 +105,91 @@ async function callApi(body = {}) {
     }
 }
 
-/* === LOGIN/LOGOUT === */
+/* === LOGIN/LOGOUT (2FA DESTEKLİ) === */
 async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     const statusDiv = document.getElementById('login-status');
+    const userVal = document.getElementById('username').value;
+    const passVal = document.getElementById('password').value;
+
     statusDiv.innerText = 'Kontrol ediliyor...';
     statusDiv.className = 'status-loading';
     btn.disabled = true;
 
     const res = await callApi({
         action: 'login',
-        user: document.getElementById('username').value,
-        pass: document.getElementById('password').value
+        user: userVal,
+        pass: passVal
     });
 
-    if (res && res.status === 'success') {
-        currentUser = res;
-        localStorage.setItem('site_telekom_user', JSON.stringify(res));
-        statusDiv.innerText = 'Giriş Başarılı!';
-        statusDiv.className = 'status-success';
+    // Durum 1: 2FA Gerekli (Mail OTP)
+    if (res && res.status === '2fa_required') {
+        const { value: otpCode } = await Swal.fire({
+            title: '🔐 Doğrulama Kodu',
+            text: `${res.email} adresine gönderilen 6 haneli kodu girin.`,
+            input: 'text',
+            inputAttributes: { maxlength: 6, style: 'text-align:center; font-size:24px; letter-spacing:5px;' },
+            showCancelButton: true,
+            confirmButtonText: 'Doğrula ve Gir',
+            cancelButtonText: 'İptal',
+            allowOutsideClick: false,
+            preConfirm: (code) => {
+                if (!code || code.length !== 6) {
+                    Swal.showValidationMessage('Lütfen 6 haneli kodu girin');
+                }
+                return code;
+            }
+        });
 
-        setTimeout(() => {
-            if (res.forceReset) {
+        if (otpCode) {
+            Swal.showLoading();
+            const verifyRes = await callApi({
+                action: 'verify2fa',
+                user: userVal,
+                code: otpCode
+            });
+
+            if (verifyRes && verifyRes.status !== 'error') {
+                completeLogin(verifyRes);
+            } else {
+                Swal.fire('Hata', verifyRes.message || 'Hatalı kod!', 'error');
                 btn.disabled = false;
                 statusDiv.innerText = '';
-                promptChangePassword(true);
-                return;
             }
-            initDashboardWithUser(res);
-            statusDiv.innerText = '';
+        } else {
             btn.disabled = false;
-        }, 800);
+            statusDiv.innerText = '';
+        }
+        return;
+    }
+
+    // Durum 2: Direkt Giriş (2FA yoksa)
+    if (res && res.status === 'success') {
+        completeLogin(res);
     } else {
         statusDiv.innerText = res.message || 'Hatalı giriş!';
         statusDiv.className = 'status-error';
         btn.disabled = false;
     }
+}
+
+function completeLogin(userData) {
+    const statusDiv = document.getElementById('login-status');
+    currentUser = userData;
+    localStorage.setItem('site_telekom_user', JSON.stringify(userData));
+    statusDiv.innerText = 'Giriş Başarılı!';
+    statusDiv.className = 'status-success';
+
+    setTimeout(() => {
+        if (userData.forceReset) {
+            statusDiv.innerText = '';
+            promptChangePassword(true);
+            return;
+        }
+        initDashboardWithUser(userData);
+        statusDiv.innerText = '';
+    }, 800);
 }
 
 function logout() {
@@ -351,6 +399,10 @@ window.openUserMgmtModal = function () {
             <div class="form-group">
                 <label>Kullanıcı Adı</label>
                 <input type="text" id="new-u-name" class="swal2-input" placeholder="kullanici.adi">
+            </div>
+            <div class="form-group">
+                <label>E-Posta (2FA İçin)</label>
+                <input type="email" id="new-u-email" class="swal2-input" placeholder="ornek@mail.com">
             </div>
             ${isIk ? `
                 <div class="form-group">
