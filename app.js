@@ -786,14 +786,18 @@ async function submitRequest(e) {
 async function callApi(body = {}) {
     if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
 
-    // IP ve Konum Bilgisini Al (Eğer daha önce alınmadıysa)
+    // IP ve Konum Bilgisini Al (Hata Payını Sıfırla)
     if (!window.cachedClientInfo) {
         try {
             const ipRes = await fetch('https://ip-api.com/json/');
             const ipData = await ipRes.json();
-            window.cachedClientInfo = `${ipData.query} [${ipData.city}, ${ipData.regionName}]`;
+            if (ipData && ipData.status === 'success') {
+                window.cachedClientInfo = `${ipData.query} [${ipData.city}, ${ipData.regionName}]`;
+            } else {
+                window.cachedClientInfo = window.location.hostname;
+            }
         } catch (e) {
-            window.cachedClientInfo = window.location.hostname; // Hata durumunda site adını yaz
+            window.cachedClientInfo = window.location.hostname;
         }
     }
     body.clientInfo = window.cachedClientInfo;
