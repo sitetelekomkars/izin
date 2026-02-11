@@ -1,67 +1,72 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İzin Yönetim Sistemi</title>
+    <title>Site Telekom İzin Sistemi</title>
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css?v=2">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-
 <body>
 
-    <div class="app-container">
+    <!-- LOGIN SENSOR (DEFAULT VIEW) -->
+    <!-- app.js mantığına göre ID='view-login' görünür/gizlenir. İç yapısını değiştirdik. -->
+    <div id="view-login" class="login-view animate-fade">
+        
+        <!-- SOL TARA (RESİM) -->
+        <div class="login-left">
+            <!-- Background css ile favicon.png olarak ayarlandı -->
+        </div>
 
+        <!-- SAĞ TARAF (FORM) -->
+        <div class="login-right">
+            <div class="auth-container">
+                <img src="corporate-logo.png" alt="Site Telekom Logo" class="login-logo">
+                <h1>Hoş Geldiniz! 👋</h1>
+                <p class="auth-subtitle">Sisteme erişmek için lütfen hesabınıza giriş yapın.</p>
+                
+                <form onsubmit="handleLogin(event)" autocomplete="off">
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input type="text" id="username" placeholder="Kullanıcı adınızı girin" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary">Giriş Yap</button>
+                    <p style="margin-top: 15px; font-size: 0.8rem; color: #adb5bd;">Site Telekom © 2026</p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="app-container hidden animate-fade">
         <!-- Header -->
         <div class="header-area">
-            <div class="header-left">
-                <img src="https://cdn-icons-png.flaticon.com/512/2942/2942544.png" alt="Logo" class="logo-img">
-                <h2 class="header-title">İzin Sistemi</h2>
+            <div class="header-left" style="display:flex; align-items:center;">
+                <img src="corporate-logo.png" alt="Logo" style="height:40px; margin-right:15px;">
+                <h3 style="margin:0; color:#333;">İzin Yönetim Paneli</h3>
             </div>
-            <div class="user-info hidden" id="user-info-panel">
-                <span id="user-display" class="user-name-span">User</span>
+            <div class="user-info" id="user-info-panel">
+                <span id="user-display" style="font-weight:600; color:#0056b3;">User</span>
                 <button class="btn-logout" onclick="logout()">Çıkış Yap</button>
             </div>
         </div>
 
-        <!-- MAIN CONTENT -->
-        <main>
-
-            <!-- View 1: LOGIN -->
-            <div id="view-login" class="login-view">
-                <div class="login-card">
-                    <h2>Giriş Yap</h2>
-                    <p style="color:#64748b; margin-bottom:20px; font-size:0.9em;">Personel veya Yönetici Girişi</p>
-                    <form onsubmit="handleLogin(event)" autocomplete="off">
-                        <div class="form-group">
-                            <label>Kullanıcı Adı</label>
-                            <input type="text" id="username" placeholder="Kullanıcı Adı" autocomplete="username"
-                                required>
-                        </div>
-                        <div class="form-group">
-                            <label>Şifre</label>
-                            <input type="password" id="password" placeholder="Şifre" autocomplete="current-password"
-                                required>
-                        </div>
-                        <button type="submit" class="btn-primary">Giriş Yap</button>
-                    </form>
-                </div>
+        <!-- Main Content (Tables, Forms) -->
+        <div class="dashboard-view">
+            <div id="dashboard-content">
+                <!-- Javascript burayı dolduracak -->
             </div>
-
-            <!-- View 2: DASHBOARD -->
-            <div id="view-dashboard" class="dashboard-view hidden">
-                <div id="dashboard-content">
-                    <!-- Dynamic Content -->
-                </div>
-            </div>
-
-        </main>
+        </div>
     </div>
 
     <script src="app.js"></script>
 </body>
-
 </html>
