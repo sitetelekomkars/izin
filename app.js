@@ -692,9 +692,12 @@ function renderPage(page) {
                     <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else {
-            actionHtml = s === 'red'
-                ? `<span class="status st-red">❌ Red: ${esc(getDetailedRejectionInfo(r).reason)}</span>`
-                : getStatusBadge(s);
+            if (s === 'red') {
+                const ri = getDetailedRejectionInfo(r);
+                actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
+            } else {
+                actionHtml = getStatusBadge(s);
+            }
         }
 
         const reasonHtml = r.reason
