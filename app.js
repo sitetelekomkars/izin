@@ -1021,8 +1021,15 @@ window.generateExcelReport = async function () {
         return;
     }
 
-    // Excel formatında veri hazırla
-    let csv = 'AD SOYAD,SİCİL NO,PROJE,İZİN TÜRÜ,BAŞLANGIÇ,BİTİŞ,GÜN SAYISI,GEREKÇE,DURUM,TL ONAY,SPV ONAY,İK ONAY\n';
+    // Excel verisi hazırla
+    const excelData = [
+        ['SİTE TELEKOM İZİN TALEPLERİ RAPORU'],
+        [`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR')}`],
+        [`Dönem: ${month ? getMonthOptions().find(m => m.val === month)?.label : 'Tüm Aylar'}`],
+        [`Durum Filtre: ${status ? { 'onaylandi': 'Onaylananlar', 'red': 'Reddedilenler', 'bekliyor': 'Bekleyenler' }[status] : 'Tümü'}`],
+        [],
+        ['AD SOYAD', 'SİCİL NO', 'PROJE', 'İZİN TÜRÜ', 'BAŞLANGIÇ', 'BİTİŞ', 'GÜN SAYISI', 'GEREKÇE', 'DURUM', 'TL ONAY', 'SPV ONAY', 'İK ONAY']
+    ];
 
     filtered.forEach(r => {
         const days = calculateDays(r.start, r.end);
@@ -1034,27 +1041,64 @@ window.generateExcelReport = async function () {
             'ik_bekliyor': 'İK Bekliyor'
         }[r.status] || r.status;
 
-        csv += `"${r.fullName}","${r.sicil}","${r.project}","${r.type}","${r.start}","${r.end}","${days}","${r.reason || '-'}","${statusText}","${r.tl || '-'}","${r.spv || '-'}","${r.ik || '-'}"\n`;
+        excelData.push([
+            r.fullName || '-',
+            r.sicil || '-',
+            r.project || '-',
+            r.type || '-',
+            r.start || '-',
+            r.end || '-',
+            days,
+            r.reason || '-',
+            statusText,
+            r.tl || '-',
+            r.spv || '-',
+            r.ik || '-'
+        ]);
     });
 
-    // Dosya olarak indir
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    const fileName = `izin_raporu_${month || 'tum_aylar'}_${new Date().getTime()}.csv`;
+    // Excel workbook oluştur
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Sütun genişlikleri
+    ws['!cols'] = [
+        { wch: 20 },  // Ad Soyad
+        { wch: 12 },  // Sicil
+        { wch: 15 },  // Proje
+        { wch: 15 },  // İzin Türü
+        { wch: 12 },  // Başlangıç
+        { wch: 12 },  // Bitiş
+        { wch: 10 },  // Gün Sayısı
+        { wch: 30 },  // Gerekçe
+        { wch: 15 },  // Durum
+        { wch: 15 },  // TL Onay
+        { wch: 15 },  // SPV Onay
+        { wch: 15 }   // İK Onay
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'İzin Talepleri');
+
+    // Dosya adı
+    const monthText = month ? month.replace('-', '_') : 'tum_aylar';
+    const fileName = `Site_Telekom_Izin_Raporu_${monthText}_${new Date().getTime()}.xlsx`;
+
+    // Excel dosyasını indir
+    XLSX.writeFile(wb, fileName);
 
     Swal.fire({
         icon: 'success',
-        title: 'Rapor Hazır!',
-        html: `<b>${filtered.length}</b> kayıt Excel dosyasına aktarıldı<br><small>${fileName}</small>`,
-        timer: 3000
+        title: 'Excel Raporu Hazır!',
+        html: `
+            <div style="text-align:left; padding:10px;">
+                ✅ <b>${filtered.length}</b> kayıt Excel dosyasına aktarıldı<br>
+                📁 <b>${fileName}</b><br><br>
+                <small style="color:#666;">
+                    💡 Dosya indirme klasörünüze kaydedildi.<br>
+                    Excel'de açıldığında tam formatlı görünecek.
+                </small>
+            </div>
+        `,
+        confirmButtonText: 'Tamam'
     });
 }
-
