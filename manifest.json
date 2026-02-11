@@ -1,6 +1,6 @@
 {
   "name": "SiteTelekom İzin Sistemi",
-  "short_name": "İzinSistemi",
+  "short_name": "Siteİzin",
   "description": "SiteTelekom Personel İzin Yönetim Sistemi",
   "start_url": "./index.html",
   "display": "standalone",
@@ -19,3 +19,4 @@
     }
   ]
 }
+
