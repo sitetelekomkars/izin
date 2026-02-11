@@ -766,12 +766,21 @@ async function submitRequest(e) {
     }
 }
 
-/* === API CALL (IP/DOMAIN DESTEKLİ) === */
+/* === API CALL (IP & KONUM TAKİPLİ) === */
 async function callApi(body = {}) {
     if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
 
-    // Hangi siteden bağlanıyor bilgisini ekle
-    body.clientInfo = window.location.hostname;
+    // IP ve Konum Bilgisini Al (Eğer daha önce alınmadıysa)
+    if (!window.cachedClientInfo) {
+        try {
+            const ipRes = await fetch('https://ip-api.com/json/');
+            const ipData = await ipRes.json();
+            window.cachedClientInfo = `${ipData.query} [${ipData.city}, ${ipData.regionName}]`;
+        } catch (e) {
+            window.cachedClientInfo = window.location.hostname; // Hata durumunda site adını yaz
+        }
+    }
+    body.clientInfo = window.cachedClientInfo;
 
     const options = {
         method: 'POST',
