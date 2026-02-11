@@ -3,6 +3,8 @@
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
+let currentUser = null;
+
 // --- iOS PWA YÜKLEME KONTROLÜ ---
 function isIos() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
