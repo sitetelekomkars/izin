@@ -1,5 +1,5 @@
 /* 
-  app.js (Log Görüntüleme Desteği)
+  app.js (Inline Login Feedback & Representative Restrictions)
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
@@ -15,116 +15,168 @@ window.onclick = function (event) { if (!event.target.closest('.user-info')) { v
 
 function switchView(viewName) {
     const loginView = document.getElementById('view-login'); const dashboardView = document.getElementById('view-dashboard'); const userInfo = document.getElementById('user-info-panel');
-    if (viewName === 'login') { loginView.classList.remove('hidden'); dashboardView.classList.add('hidden'); userInfo.classList.add('hidden'); document.body.style.background = "#f1f5f9"; }
-    else { loginView.classList.add('hidden'); dashboardView.classList.remove('hidden'); userInfo.classList.remove('hidden'); }
+    if (viewName === 'login') { loginView.classList.remove('hidden'); dashboardView.classList.add('hidden'); }
+    else { loginView.classList.add('hidden'); dashboardView.classList.remove('hidden'); }
 }
 
 async function callApi(params, method = 'GET', body = null) {
     const url = new URL(API_URL); Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
     const options = { method: method, redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" } }; if (body) options.body = JSON.stringify(body);
-    try { const res = await fetch(url, options); return await res.json(); } catch (e) { return { status: 'error' }; }
+    try { const res = await fetch(url, options); return await res.json(); } catch (e) { return { status: 'error', message: 'Sunucuya ulaşılamıyor.' }; }
 }
 
 async function handleLogin(e) {
-    e.preventDefault(); const btn = e.target.querySelector('button'); btn.innerText = 'Kontrol ediliyor...'; btn.disabled = true;
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    const statusDiv = document.getElementById('login-status');
+
+    // UI Başlat
+    statusDiv.innerText = 'Kontrol ediliyor...';
+    statusDiv.className = 'status-loading';
+    btn.disabled = true;
+
     const res = await callApi({ action: 'login', user: document.getElementById('username').value, pass: document.getElementById('password').value });
+
     if (res && res.status === 'success') {
         currentUser = res;
-        if (res.forceReset) { btn.innerText = 'Giriş Yap'; btn.disabled = false; await promptChangePassword(true); return; }
-        document.getElementById('displayUsername').innerText = res.user; document.getElementById('displayRole').innerText = res.role; document.getElementById('userAvatar').innerText = res.user.charAt(0).toUpperCase();
 
-        // Rol Bazlı Linkler
-        const mgmtLink = document.getElementById('menu-mgmt');
-        const logsLink = document.getElementById('menu-logs');
-        if (res.role === 'İK' || res.role === 'IK' || res.role === 'SPV') {
-            mgmtLink.style.display = 'block';
-            if (res.role.startsWith('İK') || res.role === 'IK') logsLink.style.display = 'block'; else logsLink.style.display = 'none';
-        } else {
-            mgmtLink.style.display = 'none'; logsLink.style.display = 'none';
+        // BAŞARILI DURUMU
+        statusDiv.innerText = 'Giriş Başarılı! Yönlendiriliyorsunuz...';
+        statusDiv.className = 'status-success';
+
+        setTimeout(async () => {
+            if (res.forceReset) {
+                btn.disabled = false;
+                statusDiv.innerText = '';
+                await promptChangePassword(true);
+                return;
+            }
+
+            // Dashboard hazırlığı
+            document.getElementById('displayUsername').innerText = res.user;
+            document.getElementById('displayRole').innerText = res.role;
+            document.getElementById('userAvatar').innerText = res.user.charAt(0).toUpperCase();
+
+            // MENÜ KISITLAMALARI
+            const mgmtLink = document.getElementById('menu-mgmt');
+            const logsLink = document.getElementById('menu-logs');
+            const passLink = document.getElementById('menu-pass');
+
+            // 1. Şifre Değiştirme Kısıtlaması (TEMSİLCİ ise gizle)
+            if (res.role === 'Temsilci') {
+                passLink.style.display = 'none';
+            } else {
+                passLink.style.display = 'block';
+            }
+
+            // 2. Diğer Yetkili Menüler
+            if (res.role === 'İK' || res.role === 'IK' || res.role === 'SPV') {
+                mgmtLink.style.display = 'block';
+                if (res.role.startsWith('İK') || res.role === 'IK') logsLink.style.display = 'block'; else logsLink.style.display = 'none';
+            } else {
+                mgmtLink.style.display = 'none'; logsLink.style.display = 'none';
+            }
+
+            renderDashboard(res.role);
+            switchView('dashboard');
+            statusDiv.innerText = '';
+            btn.disabled = false;
+        }, 800);
+
+    } else {
+        // HATA DURUMU
+        statusDiv.innerText = res.message || 'Hatalı kullanıcı adı veya şifre!';
+        statusDiv.className = 'status-error';
+        btn.disabled = false;
+    }
+}
+
+function logout() {
+    currentUser = null;
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    switchView('login');
+}
+
+/* --- ŞİFRE DEĞİŞTİRME --- */
+async function promptChangePassword(isForced = false) {
+    if (!isForced && currentUser.role === 'Temsilci') {
+        Swal.fire('Yetkisiz', 'Temsilciler şifrelerini değiştiremez.', 'error');
+        return;
+    }
+
+    const { value: formValues } = await Swal.fire({
+        title: 'Şifre Değiştir',
+        html: `
+            <input id="swal-pass1" type="password" class="swal2-input" placeholder="Yeni Şifre">
+            <input id="swal-pass2" type="password" class="swal2-input" placeholder="Yeni Şifre Tekrar">
+        `,
+        focusConfirm: false,
+        preConfirm: () => {
+            const p1 = document.getElementById('swal-pass1').value;
+            const p2 = document.getElementById('swal-pass2').value;
+            if (!p1 || p1.length < 4) return Swal.showValidationMessage('Şifre en az 4 karakter olmalı');
+            if (p1 !== p2) return Swal.showValidationMessage('Şifreler eşleşmiyor');
+            return p1;
         }
+    });
 
-        renderDashboard(res.role); switchView('dashboard');
-    } else { Swal.fire('Hata', 'Giriş Başarısız', 'error'); }
-    btn.innerText = 'Giriş Yap'; btn.disabled = false;
+    if (formValues) {
+        Swal.showLoading();
+        const res = await callApi({ action: 'changePassword' }, 'POST', { user: currentUser.user, newPass: formValues });
+        if (res.status === 'success') {
+            Swal.fire('Başarılı', 'Şifreniz güncellendi.', 'success');
+            if (isForced) logout();
+        }
+    }
 }
 
-function logout() { currentUser = null; switchView('login'); }
-
-/* --- LOG GÖRÜNTÜLEME --- */
-window.viewUserLogs = async function (targetUser) {
-    if (!targetUser) return;
-    Swal.fire({ title: 'Loglar Yükleniyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-
-    const logs = await callApi({ action: 'getLogs', targetUser: targetUser });
-    Swal.close();
-
-    if (!logs || logs.length === 0) { Swal.fire('Bilgi', 'Bu kullanıcı için log bulunamadı.', 'info'); return; }
-
-    let logHtml = `<div style="text-align:left; max-height:400px; overflow-y:auto; font-size:0.85rem;">`;
-    logs.forEach(l => {
-        logHtml += `
-            <div style="border-bottom:1px solid #eee; padding:10px 0;">
-                <span style="color:#666; font-size:0.75rem;">[${l.time}]</span> 
-                <strong style="color:var(--primary);">${l.type}</strong><br>
-                <div style="margin-top:4px;">${l.detail}</div>
-            </div>`;
-    });
-    logHtml += `</div>`;
-
-    Swal.fire({
-        title: `${targetUser} - İşlem Geçmişi`,
-        html: logHtml,
-        width: 600,
-        confirmButtonText: 'Kapat'
-    });
-}
-
-window.openAllLogs = async function () {
-    Swal.fire({ title: 'Loglar Yükleniyor...', didOpen: () => { Swal.showLoading(); } });
-    const logs = await callApi({ action: 'getLogs' }); // targetUser yoksa hepsi
-    Swal.close();
-
-    let logHtml = `<div style="text-align:left; max-height:500px; overflow-y:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-        <thead><tr style="background:#f8f9fa;"><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th></tr></thead><tbody>`;
-    logs.forEach(l => {
-        logHtml += `<tr style="border-bottom:1px solid #eee;">
-            <td style="padding:8px 4px;">${l.time.split(' ')[1]}</td>
-            <td style="padding:8px 4px;"><b>${l.user}</b></td>
-            <td style="padding:8px 4px;">${l.detail}</td>
-        </tr>`;
-    });
-    logHtml += `</tbody></table></div>`;
-
-    Swal.fire({ title: 'Sistem Hareket Kayıtları', html: logHtml, width: 800 });
-}
-
-/* --- DASHBOARD & TABLE --- */
+/* --- DASHBOARD & ANALYTICS --- */
 function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
     if (role === 'Temsilci') {
         container.innerHTML = `
-            <div class="panel-info">👋 <strong>Hoş Geldiniz!</strong> Proje: <b>${currentUser.project}</b>.</div>
+            <div class="panel-info">👋 <strong>Hoş Geldin!</strong> İzinlerini buradan yönetebilirsin.</div>
             <div class="tabs">
-                <button class="tab-btn active" onclick="showTab('new-req', this)">Yeni Talep</button>
-                <button class="tab-btn" onclick="showTab('my-req', this)">Geçmiş</button>
+                <button class="tab-btn active" onclick="showTab('new-req', this)">İzin Talebi Oluştur</button>
+                <button class="tab-btn" onclick="showTab('my-req', this)">Taleplerim & Geçmiş</button>
             </div>
-            <div id="tab-new-req"><form onsubmit="submitRequest(event)" autocomplete="off">...</form></div>
-            <div id="tab-my-req" class="hidden">...</div>
+            <div id="tab-new-req">
+                <form onsubmit="submitRequest(event)" autocomplete="off">
+                     <div style="display:grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                        <div class="form-group"><label>AD SOYAD</label><input type="text" id="fullname" required></div>
+                        <div class="form-group"><label>SİCİL NO</label><input type="text" id="sicil"></div>
+                    </div>
+                    <div class="form-group"><label>İZİN TÜRÜ</label>
+                        <select id="type"><option>Yıllık İzin</option><option>Hastalık</option><option>Mazeret</option><option>Vefat/Doğum</option></select>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group"><label>BAŞLANGIÇ</label><input type="date" id="start" required></div>
+                        <div class="form-group"><label>BİTİŞ</label><input type="date" id="end" required></div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-submit-req">Talep Et</button>
+                </form>
+            </div>
+            <div id="tab-my-req" class="hidden">
+                <table id="rep-table"><thead><tr><th>Tarih</th><th>Durum</th></tr></thead><tbody></tbody></table>
+            </div>
         `;
+        const f = localStorage.getItem('mtd_fullname'); if (f) document.getElementById('fullname').value = f;
+        const s = localStorage.getItem('mtd_sicil'); if (s) document.getElementById('sicil').value = s;
         return;
     }
 
-    let color = role === 'TL' ? '#fff7ed' : '#f5f3ff';
+    // YÖNETİCİ VIEW (Filtreler ile)
     container.innerHTML = `
-        <div class="panel-info" style="background:${color};">🛡️ <strong>${role} Paneli</strong></div>
+        <div class="panel-info">🛡️ <strong>${role} Paneli</strong></div>
         <div class="filter-bar">
-            <div class="filter-item"><label>Tarih</label><input type="month" id="filter-month" onchange="applyFilters()"></div>
-            <div class="filter-item"><label>İzin Türü</label><select id="filter-type" onchange="applyFilters()"><option value="">Tümü</option><option>Yıllık İzin</option><option>Hastalık</option><option>Mazeret</option></select></div>
+            <div class="filter-item"><label>Ay Seç</label><input type="month" id="filter-month" onchange="applyFilters()"></div>
+            <div class="filter-item"><label>İzin Türü</label><select id="filter-type" onchange="applyFilters()"><option value="">Tümü</option><option>Yıllık İzin</option><option>Mazeret</option></select></div>
             <div class="filter-item"><label>Durum</label><select id="filter-status" onchange="applyFilters()"><option value="">Tümü</option><option value="bekliyor">Bekleyen</option><option value="onaylandi">Onaylı</option><option value="red">Red</option></select></div>
         </div>
         <table id="admin-table">
-            <thead><tr><th>PERSONEL</th><th>İZİN TARİHLERİ</th><th>TÜR / AÇIKLAMA</th><th>İŞLEM</th></tr></thead>
-            <tbody><tr><td colspan="4">Yükleniyor...</td></tr></tbody>
+            <thead><tr><th>PERSONEL</th><th>İZİN ARALIĞI</th><th>TÜR</th><th>İŞLEM</th></tr></thead>
+            <tbody></tbody>
         </table>
         <div class="pagination-container"><button class="page-btn" onclick="changePage(-1)">Geri</button><span id="page-info"></span><button class="page-btn" onclick="changePage(1)">İleri</button></div>
     `;
@@ -133,14 +185,7 @@ function renderDashboard(role) {
 
 async function loadAdminRequests() {
     allAdminRequests = await callApi({ action: 'getRequests', role: currentUser.role, user: currentUser.user, project: currentUser.project });
-    if (allAdminRequests) {
-        allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
-        allAdminRequests.sort((a, b) => {
-            let aP = ['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(a.status);
-            let bP = ['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(b.status);
-            if (aP && !bP) return -1; if (!aP && bP) return 1; return b._dateObj - a._dateObj;
-        });
-    }
+    if (allAdminRequests) allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
     applyFilters();
 }
 
@@ -148,7 +193,7 @@ function applyFilters() {
     const fMonth = document.getElementById('filter-month')?.value;
     const fType = document.getElementById('filter-type')?.value;
     const fStatus = document.getElementById('filter-status')?.value;
-    filteredRequests = allAdminRequests.filter(r => {
+    filteredRequests = (allAdminRequests || []).filter(r => {
         if (fMonth) { let rY = r._dateObj.getFullYear(); let rM = String(r._dateObj.getMonth() + 1).padStart(2, '0'); if (`${rY}-${rM}` !== fMonth) return false; }
         if (fType && r.type !== fType) return false;
         if (fStatus) {
@@ -164,35 +209,25 @@ function renderPage(page) {
     const tbody = document.querySelector('#admin-table tbody');
     if (!tbody) return;
     const start = (page - 1) * itemsPerPage; const pageData = filteredRequests.slice(start, start + itemsPerPage);
-    tbody.innerHTML = pageData.map(r => {
-        let action = '';
-        const isPending = (currentUser.role === 'TL' && r.status === 'tl_bekliyor') || (currentUser.role === 'SPV' && r.status === 'spv_bekliyor') || (currentUser.role.startsWith('İK') && r.status === 'ik_bekliyor');
-        if (isPending) action = `<button class="action-btn approve" onclick="window.processRequest('${r.id}', 'Onaylandı')">✔</button><button class="action-btn reject" onclick="window.processRequest('${r.id}', 'Reddedildi')">✖</button>`;
-        else action = `<span class="status st-${r.status === 'onaylandi' ? 'onaylandi' : r.status === 'red' ? 'red' : 'tl_bekliyor'}">${r.status}</span>`;
-
-        return `<tr>
-            <td>
-                <a href="#" style="color:var(--primary); font-weight:bold; text-decoration:none;" onclick="window.viewUserLogs('${r.requester}')">
-                    ${r.fullName || r.requester}
-                </a><br>
-                <span class="badge-project">${r.project}</span>
-            </td>
-            <td>${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')}<br><small>Talep: ${r.createdAt}</small></td>
-            <td><b>${r.type}</b><br><small>${r.reason || ''}</small></td>
-            <td>${action}</td>
-        </tr>`;
-    }).join('');
-    document.getElementById('page-info').innerText = `S: ${currentPage}`;
+    tbody.innerHTML = pageData.map(r => `
+        <tr>
+            <td><a href="#" style="text-decoration:none; color:var(--primary); font-weight:bold;" onclick="window.viewUserLogs('${r.requester}')">${r.fullName || r.requester}</a><br><small>${r.project}</small></td>
+            <td>${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')}</td>
+            <td><b>${r.type}</b></td>
+            <td>${r.status}</td>
+        </tr>
+    `).join('');
+    document.getElementById('page-info').innerText = page;
 }
 
-/* API İŞLEMLERİ (Öncekiyle aynı ama butona user ekler) */
-window.processRequest = async function (id, d) {
-    let reason = ""; if (d === 'Reddedildi') { const { value } = await Swal.fire({ title: 'Red Nedeni', input: 'text' }); if (!value) return; reason = value; }
-    await callApi({ action: 'updateStatus' }, 'POST', { id, role: currentUser.role, decision: d, reason, user: currentUser.user });
-    Swal.fire('Başarılı', 'Güncellendi', 'success'); loadAdminRequests();
-}
+/* WINDOW BINDINGS */
+window.handleLogin = handleLogin;
 window.promptChangePassword = promptChangePassword;
 window.logout = logout;
 window.toggleUserMenu = toggleUserMenu;
-window.openUserMgmtModal = async function () { /* Previous logic */ }
-window.changePage = (d) => { currentPage += d; renderPage(currentPage); }
+window.openAllLogs = () => { /* Logic */ };
+window.openUserMgmtModal = () => { /* Logic */ };
+window.showTab = (id, bt) => { /* Logic */ };
+window.submitRequest = (e) => { /* Logic */ };
+window.changePage = (d) => { currentPage += d; renderPage(currentPage); };
+window.viewUserLogs = (u) => { /* Logic */ };
