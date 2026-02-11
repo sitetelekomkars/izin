@@ -11,16 +11,20 @@ const itemsPerPage = 10;
 
 // SAYFA YÜKLENDİĞİNDE
 window.addEventListener('DOMContentLoaded', async () => {
+    // 1. Önce verileri (İzin Türleri vb.) çek
+    try {
+        const lt = await callApi({ action: 'getLeaveTypes' });
+        window.leaveTypes = (lt && Array.isArray(lt)) ? lt : ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
+    } catch (e) {
+        window.leaveTypes = ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
+    }
+
+    // 2. Sonra oturumu kontrol et ve dashboard'u başlat
     const savedUser = localStorage.getItem('site_telekom_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         initDashboardWithUser(currentUser);
     }
-    // Verileri arka planda çek, hata alsa da sistemi kilitleme
-    try {
-        const lt = await callApi({ action: 'getLeaveTypes' });
-        window.leaveTypes = (lt && Array.isArray(lt)) ? lt : ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
-    } catch (e) { window.leaveTypes = ['Yıllık İzin']; }
 });
 
 function initDashboardWithUser(user) {
