@@ -29,22 +29,22 @@ function initDashboardWithUser(user) {
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
-    if (user.role === 'Temsilci') passLink.style.display = 'none';
-    else passLink.style.display = 'block';
+    if (user.role === 'Temsilci' && passLink) passLink.style.display = 'none';
+    else if (passLink) passLink.style.display = 'block';
 
     if (user.role === 'İK' || user.role === 'IK' || user.role === 'SPV') {
-        mgmtLink.style.display = 'block';
+        if (mgmtLink) mgmtLink.style.display = 'block';
         if (user.role.startsWith('İK') || user.role === 'IK') {
-            logsLink.style.display = 'block';
-            reportLink.style.display = 'block'; // İK'ya özel rapor
+            if (logsLink) logsLink.style.display = 'block';
+            if (reportLink) reportLink.style.display = 'block'; // İK'ya özel rapor
         } else {
-            logsLink.style.display = 'none';
-            reportLink.style.display = 'none';
+            if (logsLink) logsLink.style.display = 'none';
+            if (reportLink) reportLink.style.display = 'none';
         }
     } else {
-        mgmtLink.style.display = 'none';
-        logsLink.style.display = 'none';
-        reportLink.style.display = 'none';
+        if (mgmtLink) mgmtLink.style.display = 'none';
+        if (logsLink) logsLink.style.display = 'none';
+        if (reportLink) reportLink.style.display = 'none';
     }
 
     renderDashboard(user.role);
