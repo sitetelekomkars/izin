@@ -105,7 +105,7 @@ async function callApi(body = {}) {
     }
 }
 
-/* === LOGIN/LOGOUT (2FA DESTEKLİ) === */
+/* === LOGIN/LOGOUT (AUTHENTICATOR 2FA) === */
 async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
@@ -123,21 +123,25 @@ async function handleLogin(e) {
         pass: passVal
     });
 
-    // Durum 1: 2FA Gerekli (Mail OTP)
-    if (res && res.status === '2fa_required') {
+    // Durum 1: İlk Kurulum (QR Kod Göster)
+    if (res && res.status === '2fa_setup') {
+        const qrChartUrl = `https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=${encodeURIComponent(res.qrUrl)}`;
+
         const { value: otpCode } = await Swal.fire({
-            title: '🔐 Doğrulama Kodu',
-            text: `${res.email} adresine gönderilen 6 haneli kodu girin.`,
+            title: '🔐 2FA Kurulumu',
+            html: `
+                <p style="font-size:0.9rem; color:#666;">Google Authenticator uygulamasından bu kodu taratın:</p>
+                <img src="${qrChartUrl}" style="margin:15px 0; border:1px solid #eee; padding:10px; border-radius:10px;">
+                <p style="font-size:0.8rem; font-weight:bold; color:#2563eb;">Anahtar: ${res.secret}</p>
+                <p style="font-size:0.85rem; margin-top:10px;">Uygulamadaki 6 haneli kodu girerek eşleştirin:</p>
+            `,
             input: 'text',
             inputAttributes: { maxlength: 6, style: 'text-align:center; font-size:24px; letter-spacing:5px;' },
             showCancelButton: true,
-            confirmButtonText: 'Doğrula ve Gir',
-            cancelButtonText: 'İptal',
+            confirmButtonText: 'Doğrula ve Bitir',
             allowOutsideClick: false,
             preConfirm: (code) => {
-                if (!code || code.length !== 6) {
-                    Swal.showValidationMessage('Lütfen 6 haneli kodu girin');
-                }
+                if (!code || code.length !== 6) { Swal.showValidationMessage('6 haneli kodu girin'); }
                 return code;
             }
         });
@@ -147,27 +151,44 @@ async function handleLogin(e) {
             const verifyRes = await callApi({
                 action: 'verify2fa',
                 user: userVal,
-                code: otpCode
+                code: otpCode,
+                isSetup: true,
+                setupSecret: res.secret
             });
-
-            if (verifyRes && verifyRes.status !== 'error') {
-                completeLogin(verifyRes);
-            } else {
-                Swal.fire('Hata', verifyRes.message || 'Hatalı kod!', 'error');
-                btn.disabled = false;
-                statusDiv.innerText = '';
-            }
-        } else {
-            btn.disabled = false;
-            statusDiv.innerText = '';
-        }
+            if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
+            else { Swal.fire('Hata', 'Kurulum başarısız, kod hatalı.', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
+        } else { btn.disabled = false; statusDiv.innerText = ''; }
         return;
     }
 
-    // Durum 2: Direkt Giriş (2FA yoksa)
-    if (res && res.status === 'success') {
-        completeLogin(res);
-    } else {
+    // Durum 2: Normal Giriş (Kod Sor)
+    if (res && res.status === '2fa_required') {
+        const { value: otpCode } = await Swal.fire({
+            title: '🔐 Güvenlik Kodu',
+            text: 'Authenticator uygulamasındaki 6 haneli kodu girin.',
+            input: 'text',
+            inputAttributes: { maxlength: 6, style: 'text-align:center; font-size:24px; letter-spacing:5px;' },
+            showCancelButton: true,
+            confirmButtonText: 'Giriş Yap',
+            allowOutsideClick: false,
+            preConfirm: (code) => {
+                if (!code || code.length !== 6) { Swal.showValidationMessage('6 haneli kodu girin'); }
+                return code;
+            }
+        });
+
+        if (otpCode) {
+            Swal.showLoading();
+            const verifyRes = await callApi({ action: 'verify2fa', user: userVal, code: otpCode });
+            if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
+            else { Swal.fire('Hata', 'Hatalı kod!', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
+        } else { btn.disabled = false; statusDiv.innerText = ''; }
+        return;
+    }
+
+    // Durum 3: Başarı
+    if (res && res.status === 'success') { completeLogin(res); }
+    else {
         statusDiv.innerText = res.message || 'Hatalı giriş!';
         statusDiv.className = 'status-error';
         btn.disabled = false;
