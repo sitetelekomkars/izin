@@ -633,22 +633,20 @@ function applyFilters() {
     renderPage(1);
 }
 
-function getStatusBadge(s) {
-    const badges = {
-        'tl_bekliyor': '<span class="status st-bekliyor">⏳ TL Bekliyor</span>',
-        'spv_bekliyor': '<span class="status st-bekliyor">⏳ SPV Bekliyor</span>',
-        'ik_bekliyor': '<span class="status st-bekliyor">⏳ İK Bekliyor</span>',
-        'onaylandi': '<span class="status st-onaylandi">✅ Onaylandı</span>',
-        'red': '<span class="status st-red">❌ Reddedildi</span>'
-    };
-    return badges[s] || s;
+function getStatusBadge(status) {
+    if (status === 'onaylandi') return '<span class="status st-green">✅ Onaylandı</span>';
+    if (status === 'red') return '<span class="status st-red">❌ Reddedildi</span>';
+    if (status === 'spv_bekliyor') return '<span class="status st-orange">⏳ SPV Onayı Bekliyor</span>';
+    if (status === 'ik_bekliyor') return '<span class="status st-orange">⏳ İK Onayı Bekliyor</span>';
+    return '<span class="status st-gray">⏳ Bekliyor</span>';
 }
 
 function getDetailedRejectionInfo(r) {
-    if (r.ik && r.ik.includes('Reddedildi')) return { rejecter: 'İK', reason: r.ik.split(': ')[1] || '-' };
-    if (r.spv && r.spv.includes('Reddedildi')) return { rejecter: 'SPV', reason: r.spv.split(': ')[1] || '-' };
-    if (r.tl && r.tl.includes('Reddedildi')) return { rejecter: 'TL', reason: r.tl.split(': ')[1] || '-' };
-    return { rejecter: 'Bilinmiyor', reason: '-' };
+    // r.tl, r.spv, r.ik içinden Reddedildi yazanları bulalım
+    if (String(r.tl).includes('Reddedildi')) return { from: 'TL', reason: String(r.tl).split(': ')[1] || 'Belirtilmedi' };
+    if (String(r.spv).includes('Reddedildi')) return { from: 'SPV', reason: String(r.spv).split(': ')[1] || 'Belirtilmedi' };
+    if (String(r.ik).includes('Reddedildi')) return { from: 'İK', reason: String(r.ik).split(': ')[1] || 'Belirtilmedi' };
+    return { from: '-', reason: '-' };
 }
 
 function calculateDays(start, end) {
@@ -672,23 +670,31 @@ function renderPage(page) {
 
     tbody.innerHTML = pageData.map(r => {
         let actionHtml = '';
-        const canApprove = (
-            (currentUser.role === 'TL' && r.status === 'tl_bekliyor') ||
-            (currentUser.role === 'SPV' && r.status === 'spv_bekliyor') ||
-            (['İK', 'IK'].includes(currentUser.role) && r.status === 'ik_bekliyor')
-        );
+        const role = currentUser.role;
+        const s = r.status;
 
-        if (canApprove) {
+        if (s === 'Bekliyor' && role === 'TL') {
             actionHtml = `
-                <button class="action-btn approve" onclick="window.processRequest('${r.id}', 'Onaylandı')">✔</button>
-                <button class="action-btn reject" onclick="window.processRequest('${r.id}', 'Reddedildi')">✖</button>
-            `;
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                </div>`;
+        } else if (s === 'spv_bekliyor' && role === 'SPV') {
+            actionHtml = `
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                </div>`;
+        } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
+            actionHtml = `
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">Reddet</button>
+                </div>`;
         } else {
-            if (r.status === 'onaylandi') actionHtml = getStatusBadge(r.status);
-            else if (r.status === 'red') {
-                const ri = getDetailedRejectionInfo(r);
-                actionHtml = `<span class="status st-red">❌ Reddedildi</span><br><small><b>${esc(ri.rejecter)}</b>: ${esc(ri.reason)}</small>`;
-            } else actionHtml = getStatusBadge(r.status);
+            actionHtml = s === 'red'
+                ? `<span class="status st-red">❌ Red: ${esc(getDetailedRejectionInfo(r).reason)}</span>`
+                : getStatusBadge(s);
         }
 
         const reasonHtml = r.reason
