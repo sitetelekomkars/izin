@@ -19,8 +19,8 @@
         <div class="login-right">
             <div class="auth-container">
                 <img src="corporate-logo.png" alt="Site Telekom Logo" class="login-logo">
-                <h1>Hoş Geldiniz 👋</h1>
-                <p class="auth-subtitle">İzin yönetim sistemi.</p>
+                <h1>Panel Girişi 👋</h1>
+                <p class="auth-subtitle">Eğitim ve İzin yönetim sistemi.</p>
                 <form onsubmit="handleLogin(event)" autocomplete="off">
                     <div class="form-group">
                         <label>Kullanıcı Adı</label>
@@ -57,11 +57,13 @@
                     <span style="font-size:0.7rem; color:#94a3b8; margin-left:5px;">▼</span>
                 </div>
                 <div id="userDropdown" class="dropdown-content">
-                    <a id="menu-logs" onclick="openAllLogs()"
-                        style="display:none; color:#2563eb; font-weight:bold;">Sistem Logları</a>
-                    <a id="menu-mgmt" onclick="openUserMgmtModal()" style="display:none;">Personel Yönetimi</a>
-                    <a id="menu-pass" onclick="promptChangePassword(false)">Şifre Değiştir</a>
-                    <a onclick="logout()" class="logout-link">Güvenli Çıkış</a>
+                    <a id="menu-logs" onclick="openSystemLogs()"
+                        style="display:none; color:#2563eb; font-weight:bold;">📋 Sistem Logları</a>
+                    <a id="menu-report" onclick="openReportModal()"
+                        style="display:none; color:#10b981; font-weight:bold;">📊 Excel Rapor</a>
+                    <a id="menu-mgmt" onclick="openUserMgmtModal()" style="display:none;">👥 Personel Yönetimi</a>
+                    <a id="menu-pass" onclick="promptChangePassword(false)">🔑 Şifre Değiştir</a>
+                    <a onclick="logout()" class="logout-link">🚪 Güvenli Çıkış</a>
                 </div>
             </div>
         </div>
@@ -74,4 +76,3 @@
 </body>
 
 </html>
-
