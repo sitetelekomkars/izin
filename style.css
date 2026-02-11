@@ -914,3 +914,32 @@ tr:hover td {
         width: 100%;
     }
 }
+/* === SIGNATURE === */
+.signature {
+    position: fixed;
+    bottom: 12px;
+    right: 15px;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+body:hover .signature {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .signature {
+        bottom: 12px;
+        right: 12px;
+        font-size: 0.6rem;
+        background: rgba(255, 255, 255, 0.4);
+        padding: 2px 6px;
+        border-radius: 4px;
+        backdrop-filter: blur(2px);
+    }
+}
