@@ -1,5 +1,5 @@
 /* 
-  style.css (Admin Table Design & Badges)
+  style.css (Filtreleme Alanı Eklendi)
 */
 :root {
     --primary: #0056b3;
@@ -8,16 +8,12 @@
     --bg-light: #f8f9fa;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
 body {
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg-light);
     color: var(--text-color);
+    margin: 0;
+    padding: 0;
     height: 100vh;
 }
 
@@ -116,7 +112,7 @@ input:focus {
     background: var(--primary-hover);
 }
 
-/* --- DASHBOARD STYLES --- */
+/* --- DASHBOARD --- */
 .app-container {
     width: 100%;
 }
@@ -132,48 +128,130 @@ input:focus {
 
 .dashboard-view {
     padding: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Filter Bar */
+.filter-bar {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 150px;
+    flex: 1;
+}
+
+.filter-item label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+.filter-item select,
+.filter-item input {
+    padding: 8px;
+    font-size: 0.9rem;
+}
+
+
+/* Dropdown */
+.user-menu-container {
+    position: relative;
+    display: inline-block;
 }
 
 .user-info {
-    font-size: 0.9rem;
+    cursor: pointer;
     display: flex;
-    gap: 15px;
     align-items: center;
+    gap: 10px;
+    padding: 8px 15px;
+    border-radius: 30px;
+    background: #f1f3f5;
+    transition: 0.2s;
 }
 
-.btn-logout {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: none;
-    padding: 6px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
+.user-info:hover {
+    background: #e9ecef;
 }
 
-.tabs {
+.user-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    background: #dee2e6;
+    border-radius: 50%;
     display: flex;
-    gap: 5px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e9ecef;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #495057;
 }
 
-.tab-btn {
-    padding: 10px 25px;
-    border: none;
-    background: transparent;
-    color: #6c757d;
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50px;
+    background-color: white;
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 1000;
+    animation: fadeIn 0.2s;
+}
+
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f1f3f5;
     cursor: pointer;
-    font-weight: 600;
 }
 
-.tab-btn.active {
-    background: white;
+.dropdown-content a:hover {
+    background-color: #f8f9fa;
     color: var(--primary);
-    border-bottom: 2px solid var(--primary);
 }
 
-/* --- NEW TABLE DESIGN --- */
+.dropdown-content a.logout-link {
+    color: #dc3545;
+    font-weight: bold;
+    border-bottom: none;
+}
+
+.dropdown-content a.logout-link:hover {
+    background-color: #fff5f5;
+}
+
+.show {
+    display: block;
+}
+
+.panel-info {
+    background: white;
+    border-left: 4px solid var(--primary);
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    margin-bottom: 25px;
+}
+
+/* Table */
 table {
     width: 100%;
     border-collapse: separate;
@@ -211,7 +289,7 @@ tr:hover td {
     background: #f8fbff;
 }
 
-/* BADGES */
+/* Badges */
 .badge-project {
     display: inline-block;
     background: #343a40;
@@ -234,7 +312,14 @@ tr:hover td {
     margin-left: 8px;
 }
 
-/* Status Badges */
+.badge-req-date {
+    font-size: 0.75rem;
+    color: #868e96;
+    display: block;
+    margin-top: 4px;
+    font-style: italic;
+}
+
 .status {
     padding: 5px 10px;
     border-radius: 6px;
@@ -248,33 +333,26 @@ tr:hover td {
     color: #856404;
 }
 
-/* Sarı */
 .st-spv_bekliyor {
     background: #e2e3e5;
     color: #383d41;
 }
 
-/* Gri */
 .st-ik_bekliyor {
     background: #d1ecf1;
     color: #0c5460;
 }
 
-/* Mavi */
 .st-onaylandi {
     background: #d4edda;
     color: #155724;
 }
 
-/* Yeşil */
 .st-red {
     background: #f8d7da;
     color: #721c24;
 }
 
-/* Kırmızı */
-
-/* Action Buttons */
 .action-btn {
     width: 32px;
     height: 32px;
@@ -284,9 +362,6 @@ tr:hover td {
     font-weight: bold;
     cursor: pointer;
     margin-right: 5px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     font-size: 1.1rem;
 }
 
@@ -294,19 +369,10 @@ tr:hover td {
     background: #22c55e;
 }
 
-.approve:hover {
-    background: #16a34a;
-}
-
 .reject {
     background: #ef4444;
 }
 
-.reject:hover {
-    background: #dc2626;
-}
-
-/* Pagination */
 .pagination-container {
     display: flex;
     align-items: center;
@@ -329,26 +395,32 @@ tr:hover td {
     cursor: not-allowed;
 }
 
-.page-info {
-    font-size: 0.9rem;
-    color: #6c757d;
-}
-
-/* Utilities */
 .hidden {
     display: none !important;
 }
 
-.panel-info {
-    background: white;
-    border-left: 4px solid var(--primary);
-    padding: 20px;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-    margin-bottom: 25px;
+.tab-btn {
+    padding: 10px 25px;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    cursor: pointer;
+    font-weight: 600;
 }
 
-/* Fade In */
+.tab-btn.active {
+    background: white;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+}
+
+.tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e9ecef;
+}
+
 .animate-fade {
     animation: fadeIn 0.5s ease-in-out;
 }
@@ -360,16 +432,5 @@ tr:hover td {
 
     to {
         opacity: 1;
-    }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-    .login-left {
-        display: none;
-    }
-
-    .login-right {
-        flex: 1;
     }
 }
