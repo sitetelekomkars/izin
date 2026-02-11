@@ -16,8 +16,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         currentUser = JSON.parse(savedUser);
         initDashboardWithUser(currentUser);
     }
-    // Token gerektirmeyen nadir bir işlem
-    window.leaveTypes = await callApi({ action: 'getLeaveTypes' });
+    // Verileri arka planda çek, hata alsa da sistemi kilitleme
+    try {
+        const lt = await callApi({ action: 'getLeaveTypes' });
+        window.leaveTypes = (lt && Array.isArray(lt)) ? lt : ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
+    } catch (e) { window.leaveTypes = ['Yıllık İzin']; }
 });
 
 function initDashboardWithUser(user) {
@@ -75,35 +78,7 @@ function getMonthOptions() {
     return months;
 }
 
-/* === API CALL (POST + JSON BODY ONLY) === */
-async function callApi(body = {}) {
-    // Eğer currentUser varsa token'ı otomatik ekle
-    if (currentUser && currentUser.token && !body.token) {
-        body.token = currentUser.token;
-    }
 
-    const options = {
-        method: 'POST',
-        redirect: "follow",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body)
-    };
-
-    try {
-        const res = await fetch(API_URL, options);
-        const json = await res.json();
-
-        if (json.status === 'error' && json.message && json.message.includes('token')) {
-            logout(); // Token geçersizse çıkış yap
-            Swal.fire('Oturum Kapandı', 'Lütfen tekrar giriş yapın.', 'info');
-        }
-
-        return json;
-    } catch (e) {
-        console.error("API Hatası:", e);
-        return { status: 'error', message: 'Sunucuya ulaşılamıyor.' };
-    }
-}
 
 /* === LOGIN/LOGOUT (AUTHENTICATOR 2FA) === */
 async function handleLogin(e) {
@@ -270,10 +245,13 @@ async function promptChangePassword(isForced = false) {
 /* === DASHBOARD RENDER === */
 function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
+    if (!container) return;
+
     const isMT = (role === 'Temsilci' || role === 'MT');
+    const typesArray = Array.isArray(window.leaveTypes) ? window.leaveTypes : ['Yıllık İzin'];
 
     if (isMT) {
-        const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
+        const leaveTypesOptions = typesArray
             .map(type => `<option>${esc(type)}</option>`).join('');
 
         container.innerHTML = `
@@ -353,7 +331,7 @@ function renderDashboard(role) {
     }
 
 
-    const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
+    const leaveTypesOptions = typesArray
         .map(type => `<option>${esc(type)}</option>`).join('');
 
     const monthOptions = getMonthOptions()
@@ -572,6 +550,27 @@ window.delUser = async function (targetUser) {
     await callApi({ action: 'deleteUser', targetUser });
     Swal.fire('Silindi', 'Kullanıcı silindi', 'success');
     loadUserListInternal();
+}
+
+window.toggle2faStatus = async function (targetUser, newStatus) {
+    const confirm = await Swal.fire({
+        title: 'Güvenlik Güncelleme',
+        text: `${targetUser} için 2FA ${newStatus === 'AKTİF' ? 'etkinleştirilecek' : 'devre dışı bırakılacak'}.`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Değiştir',
+        cancelButtonText: 'İptal'
+    });
+    if (!confirm.isConfirmed) return;
+
+    Swal.showLoading();
+    const res = await callApi({ action: 'toggle2fa', targetUser, newStatus });
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', `2FA ${newStatus === 'AKTİF' ? 'Açıldı' : 'Kapatıldı'}`, 'success');
+        loadUserListInternal();
+    } else {
+        Swal.fire('Hata', res.message || 'İşlem başarısız', 'error');
+    }
 }
 
 /* === REQUESTS MANAGEMENT === */
