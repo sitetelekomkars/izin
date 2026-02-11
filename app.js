@@ -322,14 +322,10 @@ function renderDashboard(role) {
             </div>
             <div id="tab-my-req" class="hidden">
                 <div style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:15px; align-items:end;">
+                    <div style="display:grid; grid-template-columns: 1fr auto; gap:15px; align-items:end;">
                         <div class="form-group" style="margin:0;">
-                            <label style="font-size:0.8rem; color:#6c757d;">AD SOYAD</label>
-                            <input type="text" id="search-fullname" placeholder="Örn: Ahmet Yılmaz">
-                        </div>
-                        <div class="form-group" style="margin:0;">
-                            <label style="font-size:0.8rem; color:#6c757d;">SİCİL NO</label>
-                            <input type="text" id="search-sicil" placeholder="12345">
+                            <label style="font-size:0.8rem; color:#6c757d;">PERSONEL AD SOYAD</label>
+                            <input type="text" id="search-fullname" placeholder="Sorgulamak istediğiniz ismi yazın...">
                         </div>
                         <button onclick="searchMyHistory()" class="btn-primary" style="width:auto; padding:12px 24px; margin:0;">
                             🔍 Sorgula
