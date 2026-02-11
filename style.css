@@ -614,6 +614,64 @@ tr:hover td {
     }
 }
 
+/* ===== KULLANICI YÖNETİMİ MODAL ===== */
+.mgmt-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 5px;
+}
+
+.mgmt-tab-btn {
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    border-radius: 8px 8px 0 0;
+}
+
+.mgmt-tab-btn:hover {
+    color: var(--primary);
+    background: rgba(0, 86, 179, 0.05);
+}
+
+.mgmt-tab-btn.active {
+    color: var(--primary);
+    background: rgba(0, 86, 179, 0.1);
+    border-bottom: 3px solid var(--primary);
+}
+
+.mgmt-tab-content {
+    animation: fadeIn 0.3s;
+    padding: 10px 0;
+}
+
+.alert-info {
+    background: #e0f2fe;
+    border-left: 4px solid #0284c7;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    color: #075985;
+    font-size: 0.9rem;
+}
+
+#user-list-container table {
+    font-size: 0.9rem;
+}
+
+#user-list-container th {
+    background: #f8f9fa;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1000px) {
     .login-left {
