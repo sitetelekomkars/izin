@@ -279,8 +279,10 @@ function renderDashboard(role) {
             if (savedFullname) document.getElementById('fullname').value = savedFullname;
             if (savedSicil) document.getElementById('sicil').value = savedSicil;
         }, 100);
-        return;
+
+        return; // CRITICAL: MT görünümünden sonra yönetici görünümüne geçme!
     }
+
 
     const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
         .map(type => `<option>${esc(type)}</option>`).join('');
