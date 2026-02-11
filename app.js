@@ -209,9 +209,31 @@ function renderDashboard(role) {
                 </form>
             </div>
             <div id="tab-my-req" class="hidden">
+                <div style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:15px; align-items:end;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#6c757d;">AD SOYAD</label>
+                            <input type="text" id="search-fullname" placeholder="Örn: Ahmet Yılmaz">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.8rem; color:#6c757d;">SİCİL NO</label>
+                            <input type="text" id="search-sicil" placeholder="12345">
+                        </div>
+                        <button onclick="searchMyHistory()" class="btn-primary" style="width:auto; padding:12px 24px; margin:0;">
+                            🔍 Sorgula
+                        </button>
+                    </div>
+                    <div style="margin-top:10px; font-size:0.85rem; color:#6c757d;">
+                        ℹ️ Ad-Soyad veya Sicil No ile geçmiş kayıtlarınızı sorgulayabilirsiniz.
+                    </div>
+                </div>
                 <table id="rep-table">
                     <thead><tr><th>Tarih</th><th>Tür</th><th>Gerekçe</th><th>Durum</th></tr></thead>
-                    <tbody></tbody>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">
+                            👆 Yukarıdaki arama alanını kullanarak geçmiş kayıtlarınızı görüntüleyin
+                        </td></tr>
+                    </tbody>
                 </table>
             </div>
         `;
@@ -567,6 +589,11 @@ function renderPage(page) {
         const dEnd = new Date(r.end).toLocaleDateString('tr-TR');
         const dDays = calculateDays(r.start, r.end);
 
+        // Gerekçe gösterimi
+        const reasonDisplay = r.reason
+            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem; line-height:1.4; word-break: break-word;">📝 ${r.reason}</div>`
+            : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe belirtilmedi</div>';
+
         return `
         <tr>
             <td>
@@ -575,7 +602,7 @@ function renderPage(page) {
             </td>
             <td>
                 <div style="font-weight:600;">${dStart} - ${dEnd} <span class="badge-days">${dDays} gün</span></div>
-                <small style="color:#666; font-style:italic;">${r.reason || '-'}</small>
+                ${reasonDisplay}
             </td>
             <td><b>${r.type}</b></td>
             <td>${actionHtml}</td>
@@ -690,10 +717,22 @@ window.showTab = (id, bt) => {
     if (id === 'my-req') loadMyRequests();
 }
 
-async function loadMyRequests() {
-    // LocalStorage'dan kaydedilmiş bilgileri al
-    const savedFullname = localStorage.getItem('mtd_fullname');
-    const savedSicil = localStorage.getItem('mtd_sicil');
+window.searchMyHistory = async function () {
+    // Form alanlarından değerleri al
+    const searchFullname = document.getElementById('search-fullname').value.trim();
+    const searchSicil = document.getElementById('search-sicil').value.trim();
+
+    if (!searchFullname && !searchSicil) {
+        Swal.fire('Uyarı', 'Lütfen Ad-Soyad veya Sicil No girin', 'warning');
+        return;
+    }
+
+    // Arama bilgilerini localStorage'a kaydet
+    if (searchFullname) localStorage.setItem('mtd_fullname', searchFullname);
+    if (searchSicil) localStorage.setItem('mtd_sicil', searchSicil);
+
+    const tbody = document.querySelector('#rep-table tbody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">⏳ Sorgulanıyor...</td></tr>';
 
     const res = await callApi({
         action: 'getRequests',
@@ -701,37 +740,36 @@ async function loadMyRequests() {
         user: currentUser.user
     });
 
-    const tbody = document.querySelector('#rep-table tbody');
-
     if (!res || res.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">📭 Henüz talebin yok</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">📭 Sistemde hiç kayıt bulunamadı</td></tr>';
         return;
     }
 
     let myRequests = res;
 
-    // AKILLI FİLTRELEME
-    if (savedFullname) {
-        // Önce isim-soyad ile filtrele
-        const byName = res.filter(r => r.fullName === savedFullname);
+    // FİLTRELEME
+    if (searchFullname) {
+        const byName = res.filter(r => r.fullName && r.fullName.toLowerCase().includes(searchFullname.toLowerCase()));
 
-        if (byName.length > 1 && savedSicil) {
-            // Aynı isimde birden fazla kişi var, sicil ile daralt
-            myRequests = byName.filter(r => r.sicil === savedSicil);
+        if (byName.length > 1 && searchSicil) {
+            myRequests = byName.filter(r => r.sicil === searchSicil);
         } else if (byName.length > 0) {
-            // Tek kişi veya sicil yok, isimle yetinelim
             myRequests = byName;
-        } else if (savedSicil) {
-            // İsim eşleşmedi, sicil dene
-            myRequests = res.filter(r => r.sicil === savedSicil);
+        } else if (searchSicil) {
+            myRequests = res.filter(r => r.sicil === searchSicil);
+        } else {
+            myRequests = [];
         }
-    } else if (savedSicil) {
-        // Sadece sicil var
-        myRequests = res.filter(r => r.sicil === savedSicil);
+    } else if (searchSicil) {
+        myRequests = res.filter(r => r.sicil === searchSicil);
     }
 
     if (myRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#999;">📭 Kayıt bulunamadı</td></tr>';
+        tbody.innerHTML = `
+            <tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">
+                📭 "${searchFullname || searchSicil}" ile eşleşen kayıt bulunamadı
+            </td></tr>
+        `;
         return;
     }
 
@@ -757,10 +795,32 @@ async function loadMyRequests() {
         return `<tr>
             <td>${dStart} - ${dEnd}</td>
             <td><b>${r.type}</b></td>
-            <td>${r.reason || '-'}</td>
+            <td style="max-width:200px; word-break:break-word;">${r.reason || '-'}</td>
             <td>${statusHtml}</td>
         </tr>`;
     }).join('');
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Sorgu Tamamlandı',
+        text: `${myRequests.length} kayıt bulundu`,
+        timer: 1500,
+        showConfirmButton: false
+    });
+}
+
+async function loadMyRequests() {
+    // Geçmiş sekmesi açıldığında localStorage'dan otomatik doldur
+    const savedFullname = localStorage.getItem('mtd_fullname');
+    const savedSicil = localStorage.getItem('mtd_sicil');
+
+    if (savedFullname) document.getElementById('search-fullname').value = savedFullname;
+    if (savedSicil) document.getElementById('search-sicil').value = savedSicil;
+
+    // Eğer kayıtlı bilgi varsa otomatik sorgula
+    if (savedFullname || savedSicil) {
+        setTimeout(() => searchMyHistory(), 300);
+    }
 }
 
 async function submitRequest(e) {
