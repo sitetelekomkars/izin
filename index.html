@@ -7,51 +7,34 @@
     <title>Site Telekom İzin Sistemi</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- CSS -->
-    <link rel="stylesheet" href="style.css?v=5">
-    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="style.css?v=6">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
 
-    <!-- LOGIN SENSOR (DEFAULT VIEW) -->
     <div id="view-login" class="login-view animate-fade">
-        <div class="login-left">
-            <!-- Background css ile favicon.png -->
-        </div>
+        <div class="login-left"></div>
         <div class="login-right">
             <div class="auth-container">
-                <img src="corporate-logo.png" alt="Site Telekom Logo" class="login-logo">
-                <h1>Hoş Geldiniz! 👋</h1>
-                <p class="auth-subtitle">Sisteme erişmek için lütfen hesabınıza giriş yapın.</p>
+                <img src="corporate-logo.png" alt="Logo" class="login-logo">
+                <h1>Panel Girişi 👋</h1>
                 <form onsubmit="handleLogin(event)" autocomplete="off">
-                    <div class="form-group">
-                        <label for="username">Kullanıcı Adı</label>
-                        <input type="text" id="username" placeholder="Kullanıcı adınızı girin" required
-                            autocomplete="username">
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Şifre</label>
-                        <input type="password" id="password" placeholder="••••••••" required
-                            autocomplete="current-password">
-                    </div>
+                    <div class="form-group"><label>Kullanıcı Adı</label><input type="text" id="username" required></div>
+                    <div class="form-group"><label>Şifre</label><input type="password" id="password" required></div>
                     <button type="submit" class="btn-primary">Giriş Yap</button>
-                    <p style="margin-top: 15px; font-size: 0.8rem; color: #adb5bd;">Site Telekom © 2026</p>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="app-container hidden animate-fade">
         <div class="header-area">
             <div class="header-left" style="display:flex; align-items:center;">
                 <img src="corporate-logo.png" alt="Logo" style="height:40px; margin-right:15px;">
-                <h3 style="margin:0; color:#333;">İzin Yönetim Paneli</h3>
+                <h3 style="margin:0;">İzin Yönetim Paneli</h3>
             </div>
 
-            <!-- NEW DROPDOWN MENU -->
             <div class="user-menu-container">
                 <div class="user-info" onclick="toggleUserMenu()">
                     <div id="userAvatar" class="user-avatar-placeholder">U</div>
@@ -59,21 +42,19 @@
                         <span id="displayUsername" style="font-weight:600; font-size:0.9rem;">User</span>
                         <span id="displayRole" style="font-size:0.75rem; color:#6c757d;">Role</span>
                     </div>
-                    <span style="font-size:0.8rem; margin-left:5px;">▼</span>
+                    <span>▼</span>
                 </div>
                 <div id="userDropdown" class="dropdown-content">
+                    <a id="menu-logs" onclick="openAllLogs()"
+                        style="display:none; color:#2563eb; font-weight:bold;">Sistem Logları</a>
                     <a id="menu-mgmt" onclick="openUserMgmtModal()" style="display:none;">Personel Yönetimi</a>
                     <a onclick="promptChangePassword(false)">Şifre Değiştir</a>
                     <a onclick="logout()" class="logout-link">Çıkış Yap</a>
                 </div>
             </div>
-
         </div>
-
         <div class="dashboard-view">
-            <div id="dashboard-content">
-                <!-- Javascript Content -->
-            </div>
+            <div id="dashboard-content"></div>
         </div>
     </div>
 
