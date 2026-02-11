@@ -291,8 +291,8 @@ function renderDashboard(role) {
                             <input type="text" id="fullname" placeholder="Örn: Ahmet Yılmaz" required>
                         </div>
                         <div class="form-group">
-                            <label>SİCİL NO</label>
-                            <input type="text" id="sicil" placeholder="12345" required>
+                            <label>PROJE</label>
+                            <input type="text" id="sicil" value="${esc(currentUser.project)}" readonly style="background:#f9fafb; cursor:not-allowed;">
                         </div>
                     </div>
                     <div class="form-group">
