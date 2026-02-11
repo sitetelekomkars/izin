@@ -1,5 +1,5 @@
 /* 
-  app.js (TAM İŞLEVSEL SİSTEM - Gerekçe, Onay/Red Butonları, Görünürlük)
+  app.js (Premium Ay Filtresi + Gelişmiş Kullanıcı Yönetimi)
 */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
 
@@ -42,6 +42,19 @@ function initDashboardWithUser(user) {
 
     renderDashboard(user.role);
     switchView('dashboard');
+}
+
+/* === UTILITY FUNCTIONS === */
+function getMonthOptions() {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const label = d.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+        months.push({ val, label });
+    }
+    return months;
 }
 
 /* === LOGIN/LOGOUT === */
@@ -89,7 +102,6 @@ function logout() {
     switchView('login');
 }
 
-/* === GÖRÜNÜM KONTROLÜ === */
 function toggleUserMenu() {
     document.getElementById("userDropdown").classList.toggle("show");
 }
@@ -154,7 +166,7 @@ function renderDashboard(role) {
 
     // TEMSİLCİ VIEW
     if (role === 'Temsilci') {
-        const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin', 'Hastalık', 'Mazeret'])
+        const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
             .map(type => `<option>${type}</option>`).join('');
 
         container.innerHTML = `
@@ -198,13 +210,7 @@ function renderDashboard(role) {
             </div>
             <div id="tab-my-req" class="hidden">
                 <table id="rep-table">
-                    <thead>
-                        <tr>
-                            <th>Tarih</th>
-                            <th>Tür</th>
-                            <th>Durum</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Tarih</th><th>Tür</th><th>Durum</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -212,31 +218,37 @@ function renderDashboard(role) {
         return;
     }
 
-    // YÖNETİCİ VIEW (TL, SPV, İK)
-    const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin', 'Hastalık', 'Mazeret'])
+    // YÖNETİCİ VIEW (TL, SPV, İK) - DROPDOWN AY FİLTRESİ
+    const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
         .map(type => `<option>${type}</option>`).join('');
 
+    const monthOptions = getMonthOptions()
+        .map(m => `<option value="${m.val}">${m.label}</option>`).join('');
+
     container.innerHTML = `
-        <div class="panel-info">🛡️ <strong>${role} Paneli</strong></div>
+        <div class="panel-info">🛡️ <strong>${role} Paneli</strong> - Ekibinizin izin taleplerini yönetin</div>
         <div class="filter-bar">
             <div class="filter-item">
-                <label>Ay</label>
-                <input type="month" id="filter-month" onchange="applyFilters()">
+                <label>📅 Dönem</label>
+                <select id="filter-month" onchange="applyFilters()">
+                    <option value="">Tüm Aylar</option>
+                    ${monthOptions}
+                </select>
             </div>
             <div class="filter-item">
-                <label>Tür</label>
+                <label>📋 İzin Türü</label>
                 <select id="filter-type" onchange="applyFilters()">
                     <option value="">Tümü</option>
                     ${leaveTypesOptions}
                 </select>
             </div>
             <div class="filter-item">
-                <label>Durum</label>
+                <label>🔍 Durum</label>
                 <select id="filter-status" onchange="applyFilters()">
                     <option value="">Tümü</option>
-                    <option value="bekliyor">Bekleyen</option>
-                    <option value="onaylandi">Onaylı</option>
-                    <option value="red">Red</option>
+                    <option value="bekliyor">⏳ Bekleyen</option>
+                    <option value="onaylandi">✅ Onaylı</option>
+                    <option value="red">❌ Reddedilen</option>
                 </select>
             </div>
         </div>
@@ -260,6 +272,195 @@ function renderDashboard(role) {
     loadAdminRequests();
 }
 
+/* === KULLANICI YÖNETİMİ (Premium Modal) === */
+window.openUserMgmtModal = async function () {
+    const isIk = (currentUser.role === 'İK' || currentUser.role === 'IK');
+    const isSPV = currentUser.role === 'SPV';
+
+    let html = `
+        <div class="mgmt-tabs">
+            <button class="mgmt-tab-btn active" onclick="switchMgmtTab('add')">➕ Kullanıcı Ekle</button>
+            <button class="mgmt-tab-btn" onclick="switchMgmtTab('list')">📋 Kullanıcı Listesi</button>
+        </div>
+        
+        <div id="mgmt-tab-add" class="mgmt-tab-content">
+            <div class="form-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="new-u-name" class="swal2-input" placeholder="kullanici.adi">
+            </div>
+            ${isIk ? `
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select id="new-u-role" class="swal2-input">
+                        <option value="TL">Team Leader (TL)</option>
+                        <option value="SPV">Supervisor (SPV)</option>
+                        <option value="MT">Temsilci (MT)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Proje/Grup</label>
+                    <input type="text" id="new-u-proj" class="swal2-input" placeholder="Proje adı">
+                </div>
+            ` : `
+                <div class="alert-info">
+                    ℹ️ SPV olarak sadece kendi grubunuza <b>Team Leader (TL)</b> ekleyebilirsiniz.
+                </div>
+                <input type="hidden" id="new-u-role" value="TL">
+                <input type="hidden" id="new-u-proj" value="${currentUser.project}">
+            `}
+            <button class="btn-primary" onclick="submitAddUser()" style="margin-top:20px;">Kullanıcı Ekle (Şifre: 1234)</button>
+        </div>
+        
+        <div id="mgmt-tab-list" class="mgmt-tab-content hidden">
+            <div id="user-list-container">Yükleniyor...</div>
+        </div>
+    `;
+
+    Swal.fire({
+        title: isIk ? '🛡️ Kullanıcı Yönetim Paneli' : '👥 Ekip Yönetimi',
+        html: html,
+        width: 700,
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+            // Liste sekmesi açıldığında kullanıcıları yükle
+            document.querySelector('[onclick="switchMgmtTab(\'list\')"]').addEventListener('click', loadUserListInternal);
+        }
+    });
+}
+
+window.switchMgmtTab = function (tab) {
+    document.querySelectorAll('.mgmt-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mgmt-tab-content').forEach(c => c.classList.add('hidden'));
+
+    event.target.classList.add('active');
+    document.getElementById('mgmt-tab-' + tab).classList.remove('hidden');
+}
+
+window.loadUserListInternal = async function () {
+    const container = document.getElementById('user-list-container');
+    container.innerHTML = '<div style="text-align:center; padding:20px;">Yükleniyor...</div>';
+
+    const users = await callApi({
+        action: 'getUserList',
+        role: currentUser.role,
+        project: currentUser.project
+    });
+
+    if (!users || users.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999;">Kullanıcı bulunamadı</p>';
+        return;
+    }
+
+    const isIk = (currentUser.role === 'İK' || currentUser.role === 'IK');
+
+    let table = `
+        <table style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background:#f8f9fa;">
+                    <th style="padding:12px; text-align:left;">Kullanıcı</th>
+                    <th style="padding:12px; text-align:left;">Rol</th>
+                    <th style="padding:12px; text-align:left;">Proje</th>
+                    <th style="padding:12px; text-align:center;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    users.forEach(u => {
+        table += `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:12px;"><b>${u.user}</b></td>
+                <td style="padding:12px;">${u.role}</td>
+                <td style="padding:12px;">${u.project}</td>
+                <td style="padding:12px; text-align:center;">
+                    <button onclick="resetPass('${u.user}')" class="action-btn" style="background:#f59e0b; width:auto; padding:8px 12px; font-size:0.8rem;">🔑 Şifre Sıfırla</button>
+                    ${isIk ? `<button onclick="delUser('${u.user}')" class="action-btn reject" style="width:auto; padding:8px 12px; font-size:0.8rem; margin-left:5px;">🗑️ Sil</button>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+
+    table += '</tbody></table>';
+    container.innerHTML = table;
+}
+
+window.submitAddUser = async function () {
+    const u = document.getElementById('new-u-name').value.trim();
+    const r = document.getElementById('new-u-role').value;
+    const p = document.getElementById('new-u-proj')?.value.trim() || currentUser.project;
+
+    if (!u) {
+        Swal.showValidationMessage('Kullanıcı adı gerekli');
+        return;
+    }
+
+    if ((currentUser.role === 'İK' || currentUser.role === 'IK') && !p) {
+        Swal.showValidationMessage('Proje adı gerekli');
+        return;
+    }
+
+    Swal.showLoading();
+
+    const res = await callApi({
+        action: 'addUser'
+    }, 'POST', {
+        creatorRole: currentUser.role,
+        creatorProject: currentUser.project,
+        newUser: u,
+        newPass: '1234',
+        newRole: r,
+        newProject: p,
+        user: currentUser.user
+    });
+
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', `${u} eklendi! İlk giriş şifresi: <b>1234</b>`, 'success');
+    } else {
+        Swal.fire('Hata', res.message || 'Eklenirken hata oluştu', 'error');
+    }
+}
+
+window.resetPass = async function (targetUser) {
+    const confirm = await Swal.fire({
+        title: 'Şifre Sıfırla',
+        text: `${targetUser} kullanıcısının şifresi 1234 olarak sıfırlanacak. Onaylıyor musunuz?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sıfırla',
+        cancelButtonText: 'İptal'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.showLoading();
+    await callApi({ action: 'resetPass' }, 'POST', { targetUser, user: currentUser.user });
+    Swal.fire('Başarılı', 'Şifre 1234 olarak sıfırlandı', 'success');
+}
+
+window.delUser = async function (targetUser) {
+    const confirm = await Swal.fire({
+        title: 'Kullanıcı Sil',
+        text: `${targetUser} kalıcı olarak silinecek! Bu işlem geri alınamaz.`,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sil',
+        cancelButtonText: 'İptal',
+        confirmButtonColor: '#dc3545'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.showLoading();
+    await callApi({ action: 'deleteUser' }, 'POST', {
+        creatorRole: currentUser.role,
+        targetUser,
+        user: currentUser.user
+    });
+    Swal.fire('Silindi', 'Kullanıcı başarıyla silindi', 'success');
+    loadUserListInternal();
+}
+
 /* === LOAD & FILTER === */
 async function loadAdminRequests() {
     allAdminRequests = await callApi({
@@ -271,7 +472,6 @@ async function loadAdminRequests() {
 
     if (allAdminRequests) {
         allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
-        // Bekleyenleri üste çıkar
         allAdminRequests.sort((a, b) => {
             const aP = ['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(a.status);
             const bP = ['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(b.status);
@@ -316,7 +516,7 @@ function renderPage(page) {
     if (!tbody) return;
 
     if (!filteredRequests || filteredRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px;">Kayıt bulunamadı</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">📭 Kriterlere uygun kayıt bulunamadı</td></tr>';
         document.getElementById('page-info').innerText = '-';
         return;
     }
@@ -327,7 +527,6 @@ function renderPage(page) {
     tbody.innerHTML = pageData.map(r => {
         let actionHtml = '';
 
-        // ONAY/RED BUTON KONTROLÜ
         const canApprove = (
             (currentUser.role === 'TL' && r.status === 'tl_bekliyor') ||
             (currentUser.role === 'SPV' && r.status === 'spv_bekliyor') ||
@@ -340,7 +539,6 @@ function renderPage(page) {
                 <button class="action-btn reject" onclick="window.processRequest('${r.id}', 'Reddedildi')" title="Reddet">✖</button>
             `;
         } else {
-            // Durum göster
             if (r.status === 'onaylandi') {
                 actionHtml = '<span class="status st-onaylandi">✓ Onaylandı</span>';
             } else if (r.status === 'red') {
@@ -472,7 +670,7 @@ async function loadMyRequests() {
     });
     const tbody = document.querySelector('#rep-table tbody');
     if (!res || res.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">Henüz talebin yok</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Henüz talebin yok</td></tr>';
         return;
     }
     tbody.innerHTML = res.map(r => {
@@ -511,12 +709,10 @@ async function submitRequest(e) {
 
     Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
 
-    // Formu temizle
     document.getElementById('reason').value = '';
     document.getElementById('start').value = '';
     document.getElementById('end').value = '';
 
-    // Geçmiş sekmesine geç
     showTab('my-req', document.querySelectorAll('.tab-btn')[1]);
 }
 
