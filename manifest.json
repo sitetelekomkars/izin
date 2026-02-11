@@ -1,6 +1,6 @@
 {
   "name": "SiteTelekom İzin Sistemi",
-  "short_name": "Siteİzin",
+  "short_name": "SDesk",
   "description": "SiteTelekom Personel İzin Yönetim Sistemi",
   "start_url": "./index.html",
   "display": "standalone",
@@ -19,4 +19,5 @@
     }
   ]
 }
+
 
