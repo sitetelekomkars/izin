@@ -557,6 +557,110 @@ tr:hover td {
     background: #dc2626;
 }
 
+/* === RESPONSIVE (MOBILE SUPPORT) === */
+@media (max-width: 768px) {
+    .login-view {
+        flex-direction: column;
+    }
+
+    .login-left {
+        display: none;
+    }
+
+    .login-right {
+        padding: 20px;
+    }
+
+    .auth-container {
+        padding: 20px;
+    }
+
+    .header-area {
+        padding: 10px 15px;
+        flex-direction: column;
+        gap: 15px;
+        height: auto;
+    }
+
+    .header-left h3 {
+        font-size: 1.1rem;
+    }
+
+    .dashboard-view {
+        padding: 10px;
+    }
+
+    .tab-nav {
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 5px;
+    }
+
+    .tab-btn {
+        padding: 10px 15px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    /* Tablo Mobilde Kart Görünümü veya Kaydırma */
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th,
+    td {
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+
+    /* Form ve Buton İyileştirmesi */
+    .form-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        padding: 15px;
+        /* Parmakla basmak daha kolay */
+    }
+
+    /* Modal Mobilde Tam Ekran */
+    .swal2-popup {
+        width: 95% !important;
+        padding: 0.5rem !important;
+    }
+
+    /* IK Paneli Filtreleri */
+    .dashboard-view>div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+        /* Filtreler alt alta */
+        gap: 10px !important;
+    }
+
+    #tab-my-req>div[style*="display:grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-left img {
+        height: 35px;
+    }
+
+    .user-avatar-placeholder {
+        width: 30px;
+        height: 30px;
+    }
+
+    .user-info span {
+        font-size: 0.8rem;
+    }
+}
+
 /* ===== PAGINATION ===== */
 .pagination-container {
     display: flex;
