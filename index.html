@@ -81,9 +81,24 @@
         </div>
     </div>
 
-    <div class="signature">Crafted by Sinan & Doğuş </div>
+    <!-- iOS Install Prompt Modal -->
+    <div id="ios-prompt" class="ios-prompt">
+        <div class="ios-prompt-header">
+            <img src="favicon.png" alt="App Icon">
+            <div>
+                <h4>Uygulamayı Yükleyin</h4>
+                <p>Sistemi telefonunuzda uygulama olarak kullanmak için:</p>
+            </div>
+        </div>
+        <div class="ios-prompt-steps">
+            <div class="ios-step"><span class="icon">⎋</span> Safari Paylaş butonuna basın.</div>
+            <div class="ios-step"><span class="icon">⊞</span> "Ana Ekrana Ekle" seçin.</div>
+        </div>
+        <button onclick="closeIosPrompt()" class="ios-close-btn">Anladım</button>
+    </div>
+
+    <div class="signature">Crafted by Doğuş Yalçınkaya</div>
     <script src="app.js"></script>
 </body>
 
 </html>
-
