@@ -573,76 +573,172 @@ tr:hover td {
     background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
-/* === MOBİL UYGULAMA UYUMLULUĞU (APP LOOK) === */
+/* === MOBİL UYGULAMA UYUMLULUĞU (PREMIUM APP LOOK) === */
 @media (max-width: 768px) {
     body {
-        font-size: 14px;
-        background: #fdfdfd;
-        /* Mobilde daha temiz bir arka plan */
+        background: #f4f7fa;
     }
 
     .header-area {
-        padding: 10px 15px;
-        flex-direction: column;
-        height: auto;
-        gap: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding: 5px 15px;
+        flex-direction: row;
+        /* Logo ve profil yan yana */
+        justify-content: space-between;
+        gap: 0;
+        height: 60px;
     }
 
     .header-left img {
-        height: 35px;
+        height: 28px;
     }
+
+    .header-left h3 {
+        display: none;
+    }
+
+    /* Yazıyı gizle sadece logo kalsın */
+
+    .user-info {
+        padding: 4px 10px;
+        border-radius: 30px;
+    }
+
+    .user-info span {
+        display: none;
+    }
+
+    /* Mobilde ismi gizle sadece avatar kalsın */
 
     .dashboard-view {
-        padding: 15px 10px;
+        padding: 10px;
     }
 
-    /* Tablar Mobilde Pille/Sekme görünümü */
     .tabs {
-        background: #f1f5f9;
+        margin-bottom: 15px;
+        border-bottom: none;
+        background: #eaeff5;
         padding: 4px;
         border-radius: 12px;
-        border-bottom: none;
-        overflow-x: auto;
     }
 
     .tab-btn {
         flex: 1;
-        padding: 10px;
-        font-size: 0.85rem;
-        background: transparent;
-        border-radius: 8px;
-        text-align: center;
-        white-space: nowrap;
+        padding: 8px;
+        font-size: 0.8rem;
+        border-radius: 10px;
     }
 
     .tab-btn.active {
         background: white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        color: var(--primary);
     }
 
     .tab-btn.active::after {
         display: none;
-        /* Mobilde alt çizgiyi kaldır */
     }
 
-    /* Kart Yapıları */
+    /* Kart Yapısı */
     #tab-new-req,
     #tab-my-req {
-        padding: 20px 15px;
-        border-radius: 20px;
+        padding: 15px 12px;
+        border-radius: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    /* Form Elemanları Mobilde Tam Boy */
+    /* Arama Alanı */
+    #tab-my-req>div:first-child>div {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    #search-fullname {
+        padding: 10px !important;
+        font-size: 14px !important;
+    }
+
+    /* TABLOYU KARTLARA DÖNÜŞTÜR */
+    table,
+    thead,
+    tbody,
+    th,
+    td,
+    tr {
+        display: block;
+        width: 100%;
+        border: none !important;
+    }
+
+    thead {
+        display: none;
+    }
+
+    /* Başlıkları gizle */
+
+    tr {
+        background: white;
+        margin-bottom: 12px;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+        border: 1px solid #edf2f7 !important;
+        position: relative;
+    }
+
+    td {
+        padding: 4px 0 !important;
+        font-size: 13px;
+        text-align: left;
+    }
+
+    /* Spesifik Alan Düzenlemeleri */
+    td:nth-child(1) {
+        /* Tarih Alanı */
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 14px;
+        border-bottom: 1px solid #f1f5f9 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 8px;
+    }
+
+    td:nth-child(2) {
+        /* İzin Türü */
+        font-weight: 600;
+        color: #1a202c;
+    }
+
+    td:nth-child(2)::before {
+        content: "📋 Tür: ";
+        color: #718096;
+        font-weight: 400;
+    }
+
+    td:nth-child(3)::before {
+        content: "💬 Not: ";
+        color: #718096;
+        font-weight: 400;
+    }
+
+    /* Durum Rozeti (Sağ Üst Köşeye Alalım) */
+    td:last-child {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: auto;
+    }
+
+    /* Form Elemanları */
     input,
     select,
-    textarea,
-    .btn-primary {
+    textarea {
         font-size: 16px !important;
-        /* iPhone'larda zoom yapmaması için */
+        /* Zoom engelleme */
+        padding: 12px !important;
+    }
+
+    .btn-primary {
+        width: 100%;
         padding: 14px !important;
-        border-radius: 12px;
     }
 
     /* Onay Butonları Mobilde Alt Alta veya Yan Yana Tam Genişlik */
@@ -658,29 +754,6 @@ tr:hover td {
         width: 100%;
         min-width: unset;
         font-size: 0.8rem;
-    }
-
-    /* Tabloları Mobilde Kaydırılabilir Yap */
-    table {
-        display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        border-radius: 12px;
-    }
-
-    th,
-    td {
-        padding: 12px 10px;
-    }
-
-    /* Arka Plan Süslerini Azalt */
-    .login-left {
-        display: none;
-    }
-
-    .login-right {
-        flex: 1;
-        padding: 20px;
     }
 }
 
