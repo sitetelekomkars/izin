@@ -1,0 +1,21 @@
+{
+  "name": "SiteTelekom İzin Sistemi",
+  "short_name": "İzinSistemi",
+  "description": "SiteTelekom Personel İzin Yönetim Sistemi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0056b3",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
