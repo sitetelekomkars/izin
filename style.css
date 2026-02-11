@@ -524,37 +524,53 @@ tr:hover td {
 }
 
 /* ===== ACTION BUTTONS ===== */
+.action-btns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
 .action-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
     border: none;
     color: white;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
-    margin-right: 5px;
-    font-size: 1.1rem;
-    transition: all 0.2s;
+    font-size: 0.85rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 90px;
+    justify-content: center;
 }
 
 .action-btn:hover {
-    transform: scale(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn:active {
+    transform: translateY(0);
 }
 
 .approve {
-    background: #22c55e;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
 .approve:hover {
-    background: #16a34a;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 }
 
 .reject {
-    background: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
 .reject:hover {
-    background: #dc2626;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
 /* === RESPONSIVE (MOBILE SUPPORT) === */
