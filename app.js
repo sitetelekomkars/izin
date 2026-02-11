@@ -201,8 +201,9 @@ async function promptChangePassword(isForced = false) {
 /* === DASHBOARD RENDER === */
 function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
+    const isMT = (role === 'Temsilci' || role === 'MT');
 
-    if (role === 'Temsilci') {
+    if (isMT) {
         const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin'])
             .map(type => `<option>${esc(type)}</option>`).join('');
 
