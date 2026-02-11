@@ -21,35 +21,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function initDashboardWithUser(user) {
-    document.getElementById('displayUsername').innerText = user.user;
-    document.getElementById('displayRole').innerText = user.role;
-    document.getElementById('userAvatar').innerText = user.user.charAt(0).toUpperCase();
+    if (!user) return;
 
+    // UI Elemanlarını Güncelle
+    const dUser = document.getElementById('displayUsername');
+    const dRole = document.getElementById('displayRole');
+    const dAvat = document.getElementById('userAvatar');
+
+    if (dUser) dUser.innerText = user.user;
+    if (dRole) dRole.innerText = user.role;
+    if (dAvat) dAvat.innerText = user.user.charAt(0).toUpperCase();
+
+    // Menü Görünürlük Ayarları
     const mgmtLink = document.getElementById('menu-mgmt');
     const logsLink = document.getElementById('menu-logs');
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
-    if (user.role === 'Temsilci' && passLink) passLink.style.display = 'none';
-    else if (passLink) passLink.style.display = 'block';
-
+    const isMT = ['Temsilci', 'MT'].includes(user.role);
     const isIk = ['İK', 'IK'].includes(user.role);
     const isSpv = user.role === 'SPV';
 
-    if (isIk || isSpv) {
-        if (mgmtLink) mgmtLink.style.display = 'block';
-        if (isIk) {
-            if (logsLink) logsLink.style.display = 'block';
-            if (reportLink) reportLink.style.display = 'block';
-        }
-    } else {
-        if (mgmtLink) mgmtLink.style.display = 'none';
-        if (logsLink) logsLink.style.display = 'none';
-        if (reportLink) reportLink.style.display = 'none';
-    }
+    if (passLink) passLink.style.display = isMT ? 'none' : 'block';
+    if (mgmtLink) mgmtLink.style.display = (isIk || isSpv) ? 'block' : 'none';
+    if (logsLink) logsLink.style.display = isIk ? 'block' : 'none';
+    if (reportLink) reportLink.style.display = isIk ? 'block' : 'none';
 
-    renderDashboard(user.role);
+    // Önce Görünümü Değiştir, Sonra İçeriği Render Et (Takılmayı Önler)
     switchView('dashboard');
+    renderDashboard(user.role);
 }
 
 /* === UTILITY FUNCTIONS === */
