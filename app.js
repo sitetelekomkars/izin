@@ -745,9 +745,17 @@ window.processRequest = async function (id, decision) {
 }
 
 window.searchMyHistory = async function () {
-    const fn = document.getElementById('search-fullname').value.trim();
-    const sn = document.getElementById('search-sicil').value.trim();
-    if (!fn && !sn) { Swal.fire('Uyarı', 'Lütfen isim veya sicil girin', 'warning'); return; }
+    const fn = (document.getElementById('search-fullname')?.value || '').trim();
+    const sn = (document.getElementById('search-sicil')?.value || '').trim();
+
+    // MT/Temsilci rolü kontrolü
+    const isMT = currentUser && (currentUser.role === 'MT' || currentUser.role === 'Temsilci');
+
+    // Eğer MT değilse ve isim/sicil yazılmamışsa uyarı ver
+    if (!isMT && !fn && !sn) {
+        Swal.fire('Uyarı', 'Lütfen personel adı veya sicil girerek sorgulama yapın.', 'warning');
+        return;
+    }
 
     // Geçici olarak kaydet (UX için)
     localStorage.setItem('mtd_fullname', fn);
@@ -871,6 +879,11 @@ window.showTab = function (id, btn) {
     document.getElementById('tab-new-req').classList.add('hidden');
     document.getElementById('tab-my-req').classList.add('hidden');
     document.getElementById('tab-' + id).classList.remove('hidden');
+
+    // MT Geçmişim sekmesine tıkladığında otomatik sorgula
+    if (id === 'my-req' && typeof searchMyHistory === 'function') {
+        searchMyHistory();
+    }
 };
 
 /* === SİSTEM LOGLARI (DETAYLI) === */
