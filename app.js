@@ -125,7 +125,7 @@ async function handleLogin(e) {
 
     // Durum 1: İlk Kurulum (QR Kod Göster)
     if (res && res.status === '2fa_setup') {
-        const qrChartUrl = `https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=${encodeURIComponent(res.qrUrl)}`;
+        const qrChartUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(res.qrUrl)}`;
 
         const { value: otpCode } = await Swal.fire({
             title: '🔐 2FA Kurulumu',
