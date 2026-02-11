@@ -944,3 +944,74 @@ body:hover .signature {
         padding: 0;
     }
 }
+/* === APPLE iOS INSTALL PROMPT === */
+.ios-prompt {
+    position: fixed;
+    bottom: 30px;
+    left: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+    z-index: 20000;
+    display: none;
+    animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.ios-prompt-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.ios-prompt-header img {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.ios-prompt h4 { font-weight: 800; color: #1a202c; margin: 0; font-size: 1.2rem; }
+.ios-prompt p { font-size: 0.95rem; color: #4a5568; margin: 5px 0 0 0; line-height: 1.5; }
+
+.ios-prompt-steps { 
+    margin-top: 20px; 
+    border-top: 1px solid #f1f5f9; 
+    padding-top: 20px; 
+}
+
+.ios-step { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 12px; 
+    font-weight: 600; 
+    font-size: 1rem; 
+    color: #2d3748; 
+}
+
+.ios-step span.icon { 
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+}
+
+.ios-close-btn { 
+    margin-top: 10px; 
+    width: 100%; 
+    padding: 14px; 
+    background: #0056b3; 
+    color: white; 
+    border: none; 
+    border-radius: 12px; 
+    font-weight: 700; 
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
