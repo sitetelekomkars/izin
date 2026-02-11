@@ -9,13 +9,17 @@ let filteredRequests = [];
 let currentPage = 1;
 const itemsPerPage = 10;
 
-// SAYFA YÜKLENDİĞİNDE OTURUM KONTROLÜ
-window.addEventListener('DOMContentLoaded', () => {
+// SAYFA YÜKLENDİĞİNDE OTURUM KONTROLÜ VE İZİN TÜRLERİNİ ÇEK
+window.addEventListener('DOMContentLoaded', async () => {
+    // Oturum kontrolü
     const savedUser = localStorage.getItem('site_telekom_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         initDashboardWithUser(currentUser);
     }
+
+    // İzin türlerini çek ve global değişkene kaydet
+    window.leaveTypes = await callApi({ action: 'getLeaveTypes' });
 });
 
 function initDashboardWithUser(user) {
@@ -107,6 +111,9 @@ async function promptChangePassword(isForced = false) {
 function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
     if (role === 'Temsilci') {
+        const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin', 'Hastalık', 'Mazeret'])
+            .map(type => `<option>${type}</option>`).join('');
+
         container.innerHTML = `
             <div class="panel-info">👋 <strong>Hoş Geldin!</strong> İzinlerini buradan yönetebilirsin.</div>
             <div class="tabs"><button class="tab-btn active" onclick="showTab('new-req', this)">İzin Talebi</button><button class="tab-btn" onclick="showTab('my-req', this)">Geçmişim</button></div>
@@ -116,7 +123,7 @@ function renderDashboard(role) {
                         <div class="form-group"><label>AD SOYAD</label><input type="text" id="fullname" placeholder="Örn: Ahmet Yılmaz" required></div>
                         <div class="form-group"><label>SİCİL NO</label><input type="text" id="sicil" placeholder="12345" required></div>
                     </div>
-                    <div class="form-group"><label>İZİN TÜRÜ</label><select id="type"><option>Yıllık İzin</option><option>Hastalık</option><option>Mazeret</option></select></div>
+                    <div class="form-group"><label>İZİN TÜRÜ</label><select id="type">${leaveTypesOptions}</select></div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div class="form-group"><label>BAŞLANGIÇ</label><input type="date" id="start" placeholder="gg-aa-yyyy" required></div>
                         <div class="form-group"><label>BİTİŞ</label><input type="date" id="end" placeholder="gg-aa-yyyy" required></div>
@@ -128,12 +135,16 @@ function renderDashboard(role) {
         `;
         return;
     }
+    // YÖNETİCİ VIEW
+    const leaveTypesOptions = (window.leaveTypes || ['Yıllık İzin', 'Hastalık', 'Mazeret'])
+        .map(type => `<option>${type}</option>`).join('');
+
     container.innerHTML = `
         <div class="panel-info">🛡️ <strong>${role} Paneli</strong></div>
         <div class="filter-bar">
             <div class="filter-item"><label>Ay</label><input type="month" id="filter-month" onchange="applyFilters()"></div>
-            <div class="filter-item"><label>Tür</label><select id="filter-type" onchange="applyFilters()"><option value="">Tümü</option><option>Yıllık İzin</option><option>Mazeret</option></select></div>
-            <div class="filter-item"><label>Durum</label><select id="filter-status" onchange="applyFilters()"><option value="">Tümü</option><option value="bekliyor">Bekleyen</option></select></div>
+            <div class="filter-item"><label>Tür</label><select id="filter-type" onchange="applyFilters()"><option value="">Tümü</option>${leaveTypesOptions}</select></div>
+            <div class="filter-item"><label>Durum</label><select id="filter-status" onchange="applyFilters()"><option value="">Tümü</option><option value="bekliyor">Bekleyen</option><option value="onaylandi">Onaylı</option><option value="red">Red</option></select></div>
         </div>
         <table id="admin-table"><thead><tr><th>PERSONEL</th><th>TARİHLER</th><th>TÜR</th><th>İŞLEM</th></tr></thead><tbody></tbody></table>
     `;
