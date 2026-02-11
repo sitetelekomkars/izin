@@ -128,7 +128,8 @@ async function handleLogin(e) {
                 user: userVal,
                 code: otpCode,
                 isSetup: true,
-                setupSecret: res.secret
+                setupSecret: res.secret,
+                forceChange: res.forceChange // Bu bilgiyi bir sonraki adıma taşı
             });
             if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
             else { Swal.fire('Hata', 'Kurulum başarısız, kod hatalı.', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
@@ -154,7 +155,7 @@ async function handleLogin(e) {
 
         if (otpCode) {
             Swal.showLoading();
-            const verifyRes = await callApi({ action: 'verify2fa', user: userVal, code: otpCode });
+            const verifyRes = await callApi({ action: 'verify2fa', user: userVal, code: otpCode, forceChange: res.forceChange });
             if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
             else { Swal.fire('Hata', 'Hatalı kod!', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
         } else { btn.disabled = false; statusDiv.innerText = ''; }
@@ -178,7 +179,7 @@ function completeLogin(userData) {
     statusDiv.className = 'status-success';
 
     setTimeout(() => {
-        if (userData.forceReset) {
+        if (userData.forceChange) {
             statusDiv.innerText = '';
             promptChangePassword(true);
             return;
@@ -191,6 +192,20 @@ function completeLogin(userData) {
 function logout() {
     currentUser = null;
     localStorage.removeItem('site_telekom_user');
+
+    // Login formunu temizle ve butonu aktif et
+    const loginForm = document.querySelector('#view-login form');
+    if (loginForm) {
+        loginForm.reset();
+        const btn = loginForm.querySelector('button');
+        if (btn) btn.disabled = false;
+    }
+    const statusDiv = document.getElementById('login-status');
+    if (statusDiv) {
+        statusDiv.innerText = '';
+        statusDiv.className = '';
+    }
+
     switchView('login');
 }
 
@@ -221,12 +236,20 @@ function switchView(viewName) {
 
 async function promptChangePassword(isForced = false) {
     const { value: p1 } = await Swal.fire({
-        title: 'Şifre Değiştir',
+        title: isForced ? '⚠️ Şifrenizi Güncelleyin' : 'Şifre Değiştir',
+        text: isForced ? 'Güvenliğiniz için varsayılan şifreyi (1234) değiştirmeniz gerekmektedir.' : '',
         input: 'password',
         placeholder: 'Yeni Şifreniz',
         showCancelButton: !isForced,
         confirmButtonText: 'Güncelle',
-        cancelButtonText: 'İptal'
+        cancelButtonText: 'İptal',
+        allowOutsideClick: !isForced,
+        allowEscapeKey: !isForced,
+        inputValidator: (value) => {
+            if (!value || value === '1234') {
+                return 'Lütfen 1234 dışında güvenli bir şifre belirleyin!';
+            }
+        }
     });
     if (p1) {
         const res = await callApi({
@@ -783,24 +806,34 @@ async function submitRequest(e) {
 }
 
 /* === API CALL (IP & KONUM TAKİPLİ) === */
-async function callApi(body = {}) {
-    if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
+// IP Bilgisini Alma (Pending durumunu yöneten güvenli yapı)
+let ipFetchPromise = null;
+async function getClientInfo() {
+    if (window.cachedClientInfo) return window.cachedClientInfo;
+    if (ipFetchPromise) return ipFetchPromise;
 
-    // IP ve Konum Bilgisini Al (Hata Payını Sıfırla)
-    if (!window.cachedClientInfo) {
+    ipFetchPromise = (async () => {
         try {
-            const ipRes = await fetch('https://ip-api.com/json/');
-            const ipData = await ipRes.json();
-            if (ipData && ipData.status === 'success') {
-                window.cachedClientInfo = `${ipData.query} [${ipData.city}, ${ipData.regionName}]`;
+            const res = await fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) });
+            const data = await res.json();
+            if (data && data.status === 'success') {
+                window.cachedClientInfo = `${data.query} [${data.city}, ${data.regionName}]`;
             } else {
                 window.cachedClientInfo = window.location.hostname;
             }
         } catch (e) {
             window.cachedClientInfo = window.location.hostname;
         }
-    }
-    body.clientInfo = window.cachedClientInfo;
+        return window.cachedClientInfo;
+    })();
+    return ipFetchPromise;
+}
+
+async function callApi(body = {}) {
+    if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
+
+    // IP Bilgisini hazır olana kadar bekle (ilk girişte önemlidir)
+    body.clientInfo = await getClientInfo();
 
     const options = {
         method: 'POST',
