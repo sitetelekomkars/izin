@@ -669,7 +669,10 @@ window.toggle2faStatus = async function (targetUser, newStatus) {
 async function loadAdminRequests() {
     allAdminRequests = await callApi({ action: 'getRequests' });
     if (allAdminRequests && Array.isArray(allAdminRequests)) {
-        allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
+        allAdminRequests.forEach(r => {
+            // Index 5: start, Index 12: date
+            r._dateObj = new Date(r[5]);
+        });
         allAdminRequests.sort((a, b) => b._dateObj - a._dateObj);
     }
     applyFilters();
@@ -686,11 +689,12 @@ function applyFilters() {
             let rM = String(r._dateObj.getMonth() + 1).padStart(2, '0');
             if (`${rY}-${rM}` !== fMonth) return false;
         }
-        if (fType && r.type !== fType) return false;
+        // Index 4: type, Index 8: status
+        if (fType && r[4] !== fType) return false;
         if (fStatus) {
             if (fStatus === 'bekliyor') {
-                if (!['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor'].includes(r.status)) return false;
-            } else if (fStatus !== r.status) return false;
+                if (!['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor', 'Bekliyor'].includes(r[8])) return false;
+            } else if (fStatus !== r[8]) return false;
         }
         return true;
     });
@@ -707,10 +711,10 @@ function getStatusBadge(status) {
 }
 
 function getDetailedRejectionInfo(r) {
-    // r.tl, r.spv, r.ik içinden Reddedildi yazanları bulalım
-    if (String(r.tl).includes('Reddedildi')) return { from: 'TL', reason: String(r.tl).split(': ')[1] || 'Belirtilmedi' };
-    if (String(r.spv).includes('Reddedildi')) return { from: 'SPV', reason: String(r.spv).split(': ')[1] || 'Belirtilmedi' };
-    if (String(r.ik).includes('Reddedildi')) return { from: 'İK', reason: String(r.ik).split(': ')[1] || 'Belirtilmedi' };
+    // r[9]: tl, r[10]: spv, r[11]: ik
+    if (String(r[9]).includes('Reddedildi')) return { from: 'TL', reason: String(r[9]).split(': ')[1] || 'Belirtilmedi' };
+    if (String(r[10]).includes('Reddedildi')) return { from: 'SPV', reason: String(r[10]).split(': ')[1] || 'Belirtilmedi' };
+    if (String(r[11]).includes('Reddedildi')) return { from: 'İK', reason: String(r[11]).split(': ')[1] || 'Belirtilmedi' };
     return { from: '-', reason: '-' };
 }
 
@@ -736,25 +740,25 @@ function renderPage(page) {
     tbody.innerHTML = pageData.map(r => {
         let actionHtml = '';
         const role = currentUser.role;
-        const s = r.status;
+        const s = r[8]; // Status index 8
 
         if (s === 'Bekliyor' && role === 'TL') {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r[0]}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r[0]}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else if (s === 'spv_bekliyor' && role === 'SPV') {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r[0]}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r[0]}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
             actionHtml = `
                 <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    <button class="action-btn approve" onclick="processRequest('${r[0]}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r[0]}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
         } else {
             if (s === 'red') {
@@ -765,18 +769,18 @@ function renderPage(page) {
             }
         }
 
-        const reasonHtml = r.reason
-            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r.reason)}</div>`
+        const reasonHtml = r[7]
+            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r[7])}</div>`
             : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe yok</div>';
 
         return `
             <tr>
-                <td><b>${esc(r.fullName || r.requester)}</b><br><span class="badge-project">${esc(r.project)}</span></td>
+                <td><b>${esc(r[2] || r[1])}</b><br><span class="badge-project">${esc(r[3])}</span></td>
                 <td>
-                    <div style="font-weight:600;">${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')} <span class="badge-days">${calculateDays(r.start, r.end)} gün</span></div>
+                    <div style="font-weight:600;">${new Date(r[5]).toLocaleDateString('tr-TR')} - ${new Date(r[6]).toLocaleDateString('tr-TR')} <span class="badge-days">${calculateDays(r[5], r[6])} gün</span></div>
                     ${reasonHtml}
                 </td>
-                <td><b>${esc(r.type)}</b></td>
+                <td><b>${esc(r[4])}</b></td>
                 <td>${actionHtml}</td>
             </tr>
         `;
@@ -842,22 +846,23 @@ window.searchMyHistory = async function () {
     if (!res || !Array.isArray(res)) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
 
     const filtered = res.filter(r => {
-        const matchName = fn ? r.fullName.toLocaleLowerCase('tr-TR').includes(fn.toLocaleLowerCase('tr-TR')) : true;
-        const matchSicil = sn ? r.sicil === sn : true;
+        // Index 2: fullName, Index 1: sicil/requester
+        const matchName = fn ? String(r[2] || "").toLocaleLowerCase('tr-TR').includes(fn.toLocaleLowerCase('tr-TR')) : true;
+        const matchSicil = sn ? String(r[1] || "") === sn : true;
         return matchName && matchSicil;
     });
 
-    if (filtered.length === 0) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
+    if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Kayıt bulunamadı.</td></tr>'; return; }
 
     tbody.innerHTML = filtered.map(r => {
-        let statusHtml = r.status === 'red'
+        let statusHtml = r[8] === 'red'
             ? `<span class="status st-red">❌ Red</span><br><small>${esc(getDetailedRejectionInfo(r).reason)}</small>`
-            : getStatusBadge(r.status);
+            : getStatusBadge(r[8]);
 
         return `<tr>
-            <td>${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')}</td>
-            <td><b>${esc(r.type)}</b></td>
-            <td>${esc(r.reason || '-')}</td>
+            <td>${new Date(r[5]).toLocaleDateString('tr-TR')} - ${new Date(r[6]).toLocaleDateString('tr-TR')}</td>
+            <td><b>${esc(r[4])}</b></td>
+            <td>${esc(r[7] || '-')}</td>
             <td>${statusHtml}</td>
         </tr>`;
     }).join('');
@@ -989,4 +994,37 @@ window.openSystemLogs = async function () {
     });
     tableHtml += '</tbody></table></div>';
     Swal.update({ html: tableHtml });
+}
+/* === EXCEL RAPORLAMA === */
+window.openReportModal = async function() {
+    Swal.fire({ title: " Rapor Haz rlan yor...\, html: " Veriler  ekiliyor l tfen bekleyin...\, allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+    const res = await callApi({ action: \getReportData\ });
+    if (res.status === \error\) {
+        Swal.fire(\Hata\, \Veriler al namad : \ + res.message, \error\);
+        return;
+    }
+
+    const data = res.data;
+    if (!data || data.length <= 1) {
+        Swal.fire(\Uyar \, \Raporlanacak veri bulunamad .\, \warning\);
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, \Izin_Raporu\);
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString(\tr-TR\).replace(/\./g, \_\);
+    const fileName = \SiteTelekom_Izin_Raporu_\ + dateStr + \.xlsx\;
+
+    XLSX.writeFile(wb, fileName);
+
+    Swal.fire({
+        title: \Ba ar l \,
+        text: \Rapor ba ar yla olu turuldu ve indirildi.\,
+        icon: \success\,
+        timer: 2000
+    });
 }
