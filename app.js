@@ -461,9 +461,9 @@ function applyFilters() {
     const status = document.getElementById('f-status').value;
 
     filteredRequests = allAdminRequests.filter(r => {
-        const d = r[12] ? r[12].split('.') : []; // DD.MM.YYYY
+        const d = r.date ? r.date.split('.') : []; // DD.MM.YYYY
         const m = (d.length > 1) ? parseInt(d[1]) : 0;
-        return (!month || m == month) && (!type || r[4] == type) && (!status || r[8] == status);
+        return (!month || m == month) && (!type || r.type == type) && (!status || r.status == status);
     });
 
     currentPage = 1;
@@ -485,16 +485,16 @@ function renderPage(page) {
 
     let html = '';
     data.forEach(r => {
-        const canAction = (r[8] === 'Bekliyor');
+        const canAction = (r.status === 'Bekliyor');
         html += `
             <tr>
-                <td><b>${esc(r[2])}</b><br><small>${esc(r[3])}</small></td>
-                <td><small>${esc(r[5])} - ${esc(r[6])}</small><br><small style="color:#666;">${esc(r[7])}</small></td>
-                <td>${esc(r[4])}</td>
+                <td><b>${esc(r.fullName)}</b><br><small>${esc(r.project)}</small></td>
+                <td><small>${esc(r.start)} - ${esc(r.end)}</small><br><small style="color:#666;">${esc(r.reason)}</small></td>
+                <td>${esc(r.type)}</td>
                 <td>
                     <div style="display:flex; flex-direction:column; gap:5px;">
-                        ${getStatusBadge(r[8] === 'onaylandi' ? 'Onaylandı' : (r[8] === 'red' ? 'Reddedildi' : 'Bekliyor'))}
-                        ${canAction ? `<div style="display:flex; gap:5px;"><button class="action-btn" onclick="processRequest('${r[0]}','Onaylandı')">✅</button><button class="action-btn reject" onclick="processRequest('${r[0]}','Reddedildi')">❌</button></div>` : ''}
+                        ${getStatusBadge(r.status === 'onaylandi' ? 'Onaylandı' : (r.status === 'red' ? 'Reddedildi' : 'Bekliyor'))}
+                        ${canAction ? `<div style="display:flex; gap:5px;"><button class="action-btn" onclick="processRequest('${r.id}','Onaylandı')">✅</button><button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">❌</button></div>` : ''}
                     </div>
                 </td>
             </tr>
@@ -533,12 +533,12 @@ async function searchMyHistory() {
     const res = await callApi({ action: 'getRequests' });
     if (!Array.isArray(res)) { list.innerHTML = 'Yüklenemedi.'; return; }
 
-    const my = res.filter(r => String(r[1]) === String(currentUser.user));
+    const my = res.filter(r => String(r.requester) === String(currentUser.user));
     if (my.length === 0) { list.innerHTML = 'Talep geçmişiniz temiz.'; return; }
 
     let html = '<div class="table-container"><table><thead><tr><th>Tarih</th><th>Tür</th><th>Durum</th></tr></thead><tbody>';
     my.forEach(r => {
-        html += `<tr><td><small>${r[5]}</small></td><td>${r[4]}</td><td>${getStatusBadge(r[8] === 'onaylandi' ? 'Onaylandı' : (r[8] === 'red' ? 'Reddedildi' : 'Bekliyor'))}</td></tr>`;
+        html += `<tr><td><small>${r.start}</small></td><td>${r.type}</td><td>${getStatusBadge(r.status === 'onaylandi' ? 'Onaylandı' : (r.status === 'red' ? 'Reddedildi' : 'Bekliyor'))}</td></tr>`;
     });
     html += '</tbody></table></div>';
     list.innerHTML = html;
