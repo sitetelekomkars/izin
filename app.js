@@ -89,10 +89,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 2. Sonra oturumu kontrol et ve dashboard'u başlat
-    const savedUser = localStorage.getItem('site_telekom_user');
+    // SECURITY: Using sessionStorage instead of localStorage (cleared on tab close)
+    const savedUser = sessionStorage.getItem('site_telekom_user');
     if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        initDashboardWithUser(currentUser);
+        try {
+            currentUser = JSON.parse(savedUser);
+            initDashboardWithUser(currentUser);
+        } catch (e) {
+            sessionStorage.removeItem('site_telekom_user');
+        }
     }
 });
 
@@ -247,7 +252,7 @@ async function handleLogin(e) {
 function completeLogin(userData) {
     const statusDiv = document.getElementById('login-status');
     currentUser = userData;
-    localStorage.setItem('site_telekom_user', JSON.stringify(userData));
+    sessionStorage.setItem('site_telekom_user', JSON.stringify(userData));
     statusDiv.innerText = 'Giriş Başarılı!';
     statusDiv.className = 'status-success';
 
@@ -264,7 +269,7 @@ function completeLogin(userData) {
 
 function logout() {
     currentUser = null;
-    localStorage.removeItem('site_telekom_user');
+    sessionStorage.removeItem('site_telekom_user');
 
     // Login formunu temizle ve butonu aktif et
     const loginForm = document.querySelector('#view-login form');
