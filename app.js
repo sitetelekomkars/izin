@@ -990,3 +990,38 @@ window.openSystemLogs = async function () {
     tableHtml += '</tbody></table></div>';
     Swal.update({ html: tableHtml });
 }
+
+/* === EXCEL RAPORLAMA === */
+window.openReportModal = async function () {
+    Swal.fire({
+        title: "📊 Excel Raporu",
+        html: "Veriler hazırlanıyor, lütfen bekleyin...",
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const res = await callApi({ action: "getReportData" });
+        if (!res || res.status === "error" || !res.data) {
+            Swal.fire("Hata", "Rapor verileri alınamadı.", "error");
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(res.data);
+        XLSX.utils.book_append_sheet(wb, ws, "Izin_Talepleri");
+
+        const dateStr = new Date().toLocaleDateString("tr-TR").replace(/\./g, "-");
+        XLSX.writeFile(wb, "SiteTelekom_Izin_Raporu_" + dateStr + ".xlsx");
+
+        Swal.fire({
+            icon: "success",
+            title: "Başarılı",
+            text: "Rapor indirildi.",
+            timer: 2000,
+            showConfirmButton: false
+        });
+    } catch (e) {
+        Swal.fire("Hata", "İşlem sırasında bir sorun oluştu.", "error");
+    }
+};
