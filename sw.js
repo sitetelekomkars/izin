@@ -5,12 +5,12 @@
 const CACHE_NAME = 'izin-v2.0';
 const ASSETS = [
     '/index.html',
-    '/style.css',
+    '/style.css?v=12', // Match version in HTML
     '/app.js',
     '/corporate-logo.png',
     '/favicon.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
-    'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js',
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11', // Match exact HTML Import
     'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
