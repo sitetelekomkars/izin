@@ -818,60 +818,59 @@ function renderPage(page) {
     const pageData = filteredRequests.slice(start, start + itemsPerPage);
 
     tbody.innerHTML = pageData.map(r => {
-        tbody.innerHTML = pageData.map(r => {
-            let actionHtml = '';
-            const role = (currentUser.role || '').toUpperCase();
-            const s = r.status;
+        let actionHtml = '';
+        const role = (currentUser.role || '').toUpperCase();
+        const s = r.status;
 
-            if (s === 'tl_bekliyor' && role === 'TL') {
-                actionHtml = `
+        if (s === 'tl_bekliyor' && role === 'TL') {
+            actionHtml = `
                 <div class="action-btns">
                     <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
                     <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
-            } else if (s === 'spv_bekliyor' && role === 'SPV') {
-                actionHtml = `
+        } else if (s === 'spv_bekliyor' && role === 'SPV') {
+            actionHtml = `
                 <div class="action-btns">
                     <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
                     <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
-            } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
-                actionHtml = `
+        } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
+            actionHtml = `
                 <div class="action-btns">
                     <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
                     <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                 </div>`;
+        } else {
+            if (s === 'red') {
+                const ri = getDetailedRejectionInfo(r);
+                actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
             } else {
-                if (s === 'red') {
-                    const ri = getDetailedRejectionInfo(r);
-                    actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
-                } else {
-                    actionHtml = getStatusBadge(s);
-                }
+                actionHtml = getStatusBadge(s);
             }
+        }
 
-            let docAction = '';
-            const uRole = (role || "").toLowerCase();
-            const isAdmin = uRole === 'admin';
-            const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+        let docAction = '';
+        const uRole = (role || "").toLowerCase();
+        const isAdmin = uRole === 'admin';
+        const isDanisma = uRole.includes('danı') || uRole.includes('danis');
 
-            if ((isDanisma || isAdmin) && r.ik === 'Onaylandı') {
-                docAction = `
+        if ((isDanisma || isAdmin) && r.ik === 'Onaylandı') {
+            docAction = `
                 <select class="doc-status-select" onchange="updateDocumentStatus('${r.id}', this.value)">
                     <option value="Bekliyor" ${r.documentStatus === 'Bekliyor' ? 'selected' : ''}>⏳ Bekliyor</option>
                     <option value="İmzalandı" ${r.documentStatus === 'İmzalandı' ? 'selected' : ''}>✔️ İmzalandı</option>
                     <option value="İmzalanmadı" ${r.documentStatus === 'İmzalanmadı' ? 'selected' : ''}>✖️ İmzalanmadı</option>
                 </select>`;
-            } else {
-                const docClass = getDocStatusClass(r.documentStatus);
-                docAction = `<span class="badge-doc badge-doc-${docClass}">${esc(r.documentStatus || 'Bekliyor')}</span>`;
-            }
+        } else {
+            const docClass = getDocStatusClass(r.documentStatus);
+            docAction = `<span class="badge-doc badge-doc-${docClass}">${esc(r.documentStatus || 'Bekliyor')}</span>`;
+        }
 
-            const reasonHtml = r.reason
-                ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r.reason)}</div>`
-                : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe yok</div>';
+        const reasonHtml = r.reason
+            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r.reason)}</div>`
+            : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe yok</div>';
 
-            return `
+        return `
             <tr>
                 <td><b>${esc(r.fullName || r.requester)}</b><br><span class="badge-project">${esc(r.project)}</span></td>
                 <td>
@@ -883,274 +882,274 @@ function renderPage(page) {
                 <td>${actionHtml}</td>
             </tr>
         `;
-        }).join('');
+    }).join('');
 
-        const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
-        document.getElementById('page-info').innerText = `Sayfa ${page} / ${totalPages}`;
-    }
+    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+    document.getElementById('page-info').innerText = `Sayfa ${page} / ${totalPages}`;
+}
 
 window.changePage = function (dir) {
-            const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
-            const newPage = currentPage + dir;
-            if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                renderPage(currentPage);
-            }
-        }
+    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+    const newPage = currentPage + dir;
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        renderPage(currentPage);
+    }
+}
 
 window.processRequest = async function (id, decision) {
-            let reason = '';
-            if (decision === 'Reddedildi') {
-                const { value: text } = await Swal.fire({
-                    title: 'Red Nedeni',
-                    input: 'textarea',
-                    inputPlaceholder: 'Neden reddediyorsunuz?',
-                    required: true
-                });
-                if (!text) return;
-                reason = text;
-            }
+    let reason = '';
+    if (decision === 'Reddedildi') {
+        const { value: text } = await Swal.fire({
+            title: 'Red Nedeni',
+            input: 'textarea',
+            inputPlaceholder: 'Neden reddediyorsunuz?',
+            required: true
+        });
+        if (!text) return;
+        reason = text;
+    }
 
-            Swal.showLoading();
-            const res = await callApi({ action: 'updateStatus', id, decision, reason });
-            if (res.status === 'success') {
-                Swal.fire('Başarılı', 'İşlem tamamlandı', 'success');
-                loadAdminRequests();
-            } else {
-                Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
-            }
-        }
+    Swal.showLoading();
+    const res = await callApi({ action: 'updateStatus', id, decision, reason });
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', 'İşlem tamamlandı', 'success');
+        loadAdminRequests();
+    } else {
+        Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+    }
+}
 
 window.updateDocumentStatus = async function (id, status) {
-            Swal.showLoading();
-            const res = await callApi({ action: 'updateDocumentStatus', id, status });
-            if (res.status === 'success') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Güncellendi',
-                    text: 'Evrak durumu başarıyla kaydedildi.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-                loadAdminRequests();
-            } else {
-                Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
-            }
-        }
+    Swal.showLoading();
+    const res = await callApi({ action: 'updateDocumentStatus', id, status });
+    if (res.status === 'success') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Güncellendi',
+            text: 'Evrak durumu başarıyla kaydedildi.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        loadAdminRequests();
+    } else {
+        Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+    }
+}
 
 window.searchMyHistory = async function () {
-            const fn = (document.getElementById('search-fullname')?.value || '').trim();
-            const sn = (document.getElementById('search-project')?.value || '').trim();
+    const fn = (document.getElementById('search-fullname')?.value || '').trim();
+    const sn = (document.getElementById('search-project')?.value || '').trim();
 
-            // MT/Temsilci rolü kontrolü
-            const isMT = currentUser && (currentUser.role === 'MT' || currentUser.role === 'Temsilci');
+    // MT/Temsilci rolü kontrolü
+    const isMT = currentUser && (currentUser.role === 'MT' || currentUser.role === 'Temsilci');
 
-            // Eğer MT değilse ve isim/sicil yazılmamışsa uyarı ver
-            // (Project alanı HTML'de 'sicil' id'si ile kalmış olabilir, ama logic'i project olarak güncelliyoruz)
-            if (!isMT && !fn && !sn) {
-                Swal.fire('Uyarı', 'Lütfen personel adı veya proje girerek sorgulama yapın.', 'warning');
-                return;
-            }
+    // Eğer MT değilse ve isim/sicil yazılmamışsa uyarı ver
+    // (Project alanı HTML'de 'sicil' id'si ile kalmış olabilir, ama logic'i project olarak güncelliyoruz)
+    if (!isMT && !fn && !sn) {
+        Swal.fire('Uyarı', 'Lütfen personel adı veya proje girerek sorgulama yapın.', 'warning');
+        return;
+    }
 
-            // Geçici olarak kaydet (UX için)
-            localStorage.setItem('mtd_fullname', fn);
-            localStorage.setItem('mtd_project', sn);
+    // Geçici olarak kaydet (UX için)
+    localStorage.setItem('mtd_fullname', fn);
+    localStorage.setItem('mtd_project', sn);
 
-            const tbody = document.querySelector('#rep-table tbody');
-            tbody.innerHTML = ' SORGULANIYOR...';
+    const tbody = document.querySelector('#rep-table tbody');
+    tbody.innerHTML = ' SORGULANIYOR...';
 
-            const res = await callApi({ action: 'getRequests' });
-            if (!res || !Array.isArray(res)) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
+    const res = await callApi({ action: 'getRequests' });
+    if (!res || !Array.isArray(res)) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
 
-            const filtered = res.filter(r => {
-                const matchName = fn ? r.fullName.toLocaleLowerCase('tr-TR').includes(fn.toLocaleLowerCase('tr-TR')) : true;
-                const matchProject = sn ? r.project === sn : true;
-                return matchName && matchProject;
-            });
+    const filtered = res.filter(r => {
+        const matchName = fn ? r.fullName.toLocaleLowerCase('tr-TR').includes(fn.toLocaleLowerCase('tr-TR')) : true;
+        const matchProject = sn ? r.project === sn : true;
+        return matchName && matchProject;
+    });
 
-            if (filtered.length === 0) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
+    if (filtered.length === 0) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
 
-            tbody.innerHTML = filtered.map(r => {
-                let statusHtml = r.status === 'red'
-                    ? `<span class="status st-red">❌ Red</span><br><small>${esc(getDetailedRejectionInfo(r).reason)}</small>`
-                    : getStatusBadge(r.status);
+    tbody.innerHTML = filtered.map(r => {
+        let statusHtml = r.status === 'red'
+            ? `<span class="status st-red">❌ Red</span><br><small>${esc(getDetailedRejectionInfo(r).reason)}</small>`
+            : getStatusBadge(r.status);
 
-                return `<tr>
+        return `<tr>
             <td>${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')}</td>
             <td><b>${esc(r.type)}</b></td>
             <td>${esc(r.reason || '-')}</td>
             <td>${statusHtml}</td>
         </tr>`;
-            }).join('');
-        }
+    }).join('');
+}
 
 async function submitRequest(e) {
-            e.preventDefault();
-            const formData = {
-                fullName: document.getElementById('fullname').value,
-                project: document.getElementById('sicil').value, // 'sicil' id'li kutuda artık Proje yazıyor
-                type: document.getElementById('type').value,
-                start: document.getElementById('start').value,
-                end: document.getElementById('end').value,
-                reason: document.getElementById('reason').value
-            };
+    e.preventDefault();
+    const formData = {
+        fullName: document.getElementById('fullname').value,
+        project: document.getElementById('sicil').value, // 'sicil' id'li kutuda artık Proje yazıyor
+        type: document.getElementById('type').value,
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value,
+        reason: document.getElementById('reason').value
+    };
 
-            localStorage.setItem('mtd_fullname', formData.fullName);
+    localStorage.setItem('mtd_fullname', formData.fullName);
 
-            Swal.showLoading();
+    Swal.showLoading();
 
-            // STATUS FLOW LOGIC (TL requests go to SPV, others to IK)
-            let initialStatus = "tl_bekliyor";
-            if (currentUser.role === 'TL') initialStatus = "spv_bekliyor";
-            else if (['SPV', 'Danışma', 'İK', 'IK'].includes(currentUser.role)) initialStatus = "ik_bekliyor";
-            else if (['KALİTE', 'BİLGİ İŞLEM', 'DESTEK', 'EĞİTMEN'].includes((currentUser.role || "").toUpperCase())) initialStatus = "tl_bekliyor";
+    // STATUS FLOW LOGIC (TL requests go to SPV, others to IK)
+    let initialStatus = "tl_bekliyor";
+    if (currentUser.role === 'TL') initialStatus = "spv_bekliyor";
+    else if (['SPV', 'Danışma', 'İK', 'IK'].includes(currentUser.role)) initialStatus = "ik_bekliyor";
+    else if (['KALİTE', 'BİLGİ İŞLEM', 'DESTEK', 'EĞİTMEN'].includes((currentUser.role || "").toUpperCase())) initialStatus = "tl_bekliyor";
 
-            const res = await callApi({ action: 'submitRequest', formData, initialStatus });
+    const res = await callApi({ action: 'submitRequest', formData, initialStatus });
 
-            if (res.status === 'success') {
-                Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
-                document.getElementById('reason').value = '';
-                document.getElementById('start').value = '';
-                document.getElementById('end').value = '';
-                // Taleplerim sekmesini göster ve orayı yenile (eğer varsa fonksiyona bağla)
-                if (typeof searchMyHistory === 'function') searchMyHistory();
-            } else {
-                Swal.fire('Hata', res.message || 'Gönderilemedi', 'error');
-            }
-        }
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
+        document.getElementById('reason').value = '';
+        document.getElementById('start').value = '';
+        document.getElementById('end').value = '';
+        // Taleplerim sekmesini göster ve orayı yenile (eğer varsa fonksiyona bağla)
+        if (typeof searchMyHistory === 'function') searchMyHistory();
+    } else {
+        Swal.fire('Hata', res.message || 'Gönderilemedi', 'error');
+    }
+}
 
 /* === API CALL (IP & KONUM TAKİPLİ) === */
 // IP Bilgisini Alma (Pending durumunu yöneten güvenli yapı)
 let ipFetchPromise = null;
-    async function getClientInfo() {
-        if (window.cachedClientInfo) return window.cachedClientInfo;
-        if (ipFetchPromise) return ipFetchPromise;
+async function getClientInfo() {
+    if (window.cachedClientInfo) return window.cachedClientInfo;
+    if (ipFetchPromise) return ipFetchPromise;
 
-        ipFetchPromise = (async () => {
-            try {
-                const res = await fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) });
-                const data = await res.json();
-                if (data && data.status === 'success') {
-                    window.cachedClientInfo = `${data.query} [${data.city}, ${data.regionName}]`;
-                } else {
-                    window.cachedClientInfo = window.location.hostname;
-                }
-            } catch (e) {
+    ipFetchPromise = (async () => {
+        try {
+            const res = await fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) });
+            const data = await res.json();
+            if (data && data.status === 'success') {
+                window.cachedClientInfo = `${data.query} [${data.city}, ${data.regionName}]`;
+            } else {
                 window.cachedClientInfo = window.location.hostname;
             }
-            return window.cachedClientInfo;
-        })();
-        return ipFetchPromise;
+        } catch (e) {
+            window.cachedClientInfo = window.location.hostname;
+        }
+        return window.cachedClientInfo;
+    })();
+    return ipFetchPromise;
+}
+
+async function callApi(body = {}, retries = 2) {
+    if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
+
+    // SECURITY: Check token expiration
+    if (currentUser && currentUser.tokenExpiry && Date.now() > currentUser.tokenExpiry) {
+        logout();
+        showError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+        return { status: 'error', message: 'Token expired' };
     }
 
-    async function callApi(body = {}, retries = 2) {
-        if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
+    body.clientInfo = await getClientInfo();
 
-        // SECURITY: Check token expiration
-        if (currentUser && currentUser.tokenExpiry && Date.now() > currentUser.tokenExpiry) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const options = {
+        method: 'POST',
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body),
+        signal: controller.signal
+    };
+
+    try {
+        const res = await fetch(API_URL, options);
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const json = await res.json();
+
+        if (json.status === 'error' && json.message && json.message.includes('token')) {
             logout();
             showError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-            return { status: 'error', message: 'Token expired' };
         }
 
-        body.clientInfo = await getClientInfo();
+        return json;
+    } catch (e) {
+        clearTimeout(timeoutId);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        // Retry on network errors
+        if (retries > 0 && (e.name === 'AbortError' || e.message.includes('Failed to fetch'))) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return callApi(body, retries - 1);
+        }
 
-        const options = {
-            method: 'POST',
-            redirect: "follow",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(body),
-            signal: controller.signal
-        };
+        let errorMsg = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
+        if (e.name === 'AbortError') {
+            errorMsg = 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.';
+        } else if (e.message.includes('HTTP')) {
+            errorMsg = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+        }
 
-        try {
-            const res = await fetch(API_URL, options);
-            clearTimeout(timeoutId);
+        showError(errorMsg);
+        return { status: 'error', message: errorMsg };
+    }
+}
 
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            }
+function showError(message) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Hata',
+        text: message,
+        confirmButtonText: 'Tamam'
+    });
+}
 
-            const json = await res.json();
+/* === WINDOW BINDINGS === */
+window.handleLogin = handleLogin;
+window.logout = logout;
+window.toggleUserMenu = toggleUserMenu;
+window.submitRequest = submitRequest;
+window.applyFilters = applyFilters;
+window.changePage = changePage;
 
-            if (json.status === 'error' && json.message && json.message.includes('token')) {
-                logout();
-                showError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-            }
+window.showTab = function (id, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
 
-            return json;
-        } catch (e) {
-            clearTimeout(timeoutId);
+    // Tüm olası sekmeleri gizle
+    const tabs = ['new-req', 'my-req', 'admin-panel'];
+    tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.add('hidden');
+    });
 
-            // Retry on network errors
-            if (retries > 0 && (e.name === 'AbortError' || e.message.includes('Failed to fetch'))) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return callApi(body, retries - 1);
-            }
+    // İstenen sekmeyi göster
+    const target = document.getElementById('tab-' + id);
+    if (target) target.classList.remove('hidden');
 
-            let errorMsg = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
-            if (e.name === 'AbortError') {
-                errorMsg = 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.';
-            } else if (e.message.includes('HTTP')) {
-                errorMsg = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
-            }
-
-            showError(errorMsg);
-            return { status: 'error', message: errorMsg };
+    // MT Geçmişim sekmesine tıkladığında otomatik sorgula
+    if (id === 'my-req') {
+        const input = document.getElementById('search-fullname');
+        if (input && input.value) {
+            searchMyHistory();
         }
     }
+}
 
-    function showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Hata',
-            text: message,
-            confirmButtonText: 'Tamam'
-        });
-    }
+/* === SİSTEM LOGLARI (DETAYLI) === */
+window.openSystemLogs = async function () {
+    Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
+    const res = await callApi({ action: 'getLogs' });
+    if (res.status === 'error' || !Array.isArray(res)) { Swal.update({ html: 'Loglar alınamadı.' }); return; }
 
-    /* === WINDOW BINDINGS === */
-    window.handleLogin = handleLogin;
-    window.logout = logout;
-    window.toggleUserMenu = toggleUserMenu;
-    window.submitRequest = submitRequest;
-    window.applyFilters = applyFilters;
-    window.changePage = changePage;
-
-    window.showTab = function (id, btn) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        // Tüm olası sekmeleri gizle
-        const tabs = ['new-req', 'my-req', 'admin-panel'];
-        tabs.forEach(t => {
-            const el = document.getElementById('tab-' + t);
-            if (el) el.classList.add('hidden');
-        });
-
-        // İstenen sekmeyi göster
-        const target = document.getElementById('tab-' + id);
-        if (target) target.classList.remove('hidden');
-
-        // MT Geçmişim sekmesine tıkladığında otomatik sorgula
-        if (id === 'my-req') {
-            const input = document.getElementById('search-fullname');
-            if (input && input.value) {
-                searchMyHistory();
-            }
-        }
-    }
-
-    /* === SİSTEM LOGLARI (DETAYLI) === */
-    window.openSystemLogs = async function () {
-        Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
-        const res = await callApi({ action: 'getLogs' });
-        if (res.status === 'error' || !Array.isArray(res)) { Swal.update({ html: 'Loglar alınamadı.' }); return; }
-
-        let tableHtml = `
+    let tableHtml = `
         <div style="max-height:500px; overflow:auto; text-align:left;">
             <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
                 <thead style="background:#f8f9fa; position:sticky; top:0;">
@@ -1158,8 +1157,8 @@ let ipFetchPromise = null;
                 </thead>
                 <tbody>
     `;
-        res.forEach(log => {
-            tableHtml += `
+    res.forEach(log => {
+        tableHtml += `
             <tr style="border-bottom:1px solid #f0f0f0;">
                 <td style="padding:8px; white-space:nowrap;">${log.time}</td>
                 <td style="padding:8px;"><b>${esc(log.user)}</b></td>
@@ -1170,35 +1169,35 @@ let ipFetchPromise = null;
                 <td style="padding:8px; font-family:monospace; color:#2563eb;">${esc(log.domain)}</td>
             </tr>
         `;
-        });
-        tableHtml += '</tbody></table></div>';
-        Swal.update({ html: tableHtml });
+    });
+    tableHtml += '</tbody></table></div>';
+    Swal.update({ html: tableHtml });
+}
+
+/* === EXCEL RAPOR (İK) === */
+window.openReportModal = async function () {
+    // Menü zaten İK için açılıyor ama yine de güvenli kontrol
+    const isIk = currentUser && ['İK', 'IK'].includes(currentUser.role);
+    if (!isIk) {
+        Swal.fire('Yetki Yok', 'Excel raporu sadece İK rolü tarafından alınabilir.', 'warning');
+        return;
     }
 
-    /* === EXCEL RAPOR (İK) === */
-    window.openReportModal = async function () {
-        // Menü zaten İK için açılıyor ama yine de güvenli kontrol
-        const isIk = currentUser && ['İK', 'IK'].includes(currentUser.role);
-        if (!isIk) {
-            Swal.fire('Yetki Yok', 'Excel raporu sadece İK rolü tarafından alınabilir.', 'warning');
-            return;
-        }
+    if (typeof XLSX === 'undefined') {
+        Swal.fire('Eksik Kütüphane', 'Excel kütüphanesi yüklenemedi (XLSX). CDN engelleniyor olabilir.', 'error');
+        return;
+    }
 
-        if (typeof XLSX === 'undefined') {
-            Swal.fire('Eksik Kütüphane', 'Excel kütüphanesi yüklenemedi (XLSX). CDN engelleniyor olabilir.', 'error');
-            return;
-        }
+    const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
 
-        const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
-
-        const { value: formValues } = await Swal.fire({
-            title: '📊 Excel Rapor',
-            width: 650,
-            confirmButtonText: 'Raporu Oluştur',
-            showCancelButton: true,
-            cancelButtonText: 'İptal',
-            focusConfirm: false,
-            html: `
+    const { value: formValues } = await Swal.fire({
+        title: '📊 Excel Rapor',
+        width: 650,
+        confirmButtonText: 'Raporu Oluştur',
+        showCancelButton: true,
+        cancelButtonText: 'İptal',
+        focusConfirm: false,
+        html: `
             <div style="text-align:left;">
                 <div class="form-group" style="margin-bottom:12px;">
                     <label style="font-size:0.75rem;">Dönem</label>
@@ -1230,87 +1229,87 @@ let ipFetchPromise = null;
                 </div>
             </div>
         `,
-            preConfirm: () => {
-                return {
-                    month: document.getElementById('rep-month')?.value || '',
-                    status: document.getElementById('rep-status')?.value || '',
-                    type: document.getElementById('rep-type')?.value || ''
-                };
-            }
-        });
-
-        if (!formValues) return;
-
-        Swal.fire({ title: 'Rapor hazırlanıyor…', html: '⏳ Lütfen bekleyin', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-        const res = await callApi({ action: 'getRequests' });
-        if (!res || !Array.isArray(res)) {
-            Swal.fire('Hata', 'Kayıtlar alınamadı. (getRequests)', 'error');
-            return;
-        }
-
-        const filtered = res.filter(r => {
-            const d = new Date(r.start);
-            if (formValues.month) {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                if (`${y}-${m}` !== formValues.month) return false;
-            }
-            if (formValues.type && r.type !== formValues.type) return false;
-            if (formValues.status) {
-                if (formValues.status === 'bekliyor') {
-                    if (!['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor', 'Bekliyor'].includes(r.status)) return false;
-                } else if (r.status !== formValues.status) return false;
-            }
-            return true;
-        });
-
-        if (filtered.length === 0) {
-            Swal.fire('Kayıt Yok', 'Seçtiğiniz filtrelere uygun kayıt bulunamadı.', 'info');
-            return;
-        }
-
-        const rows = filtered.map(r => {
-            const start = r.start ? new Date(r.start) : null;
-            const end = r.end ? new Date(r.end) : null;
-            const dayCount = (r.start && r.end) ? calculateDays(r.start, r.end) : '';
-            const rej = (r.status === 'red') ? getDetailedRejectionInfo(r) : null;
+        preConfirm: () => {
             return {
-                'ID': r.id || '',
-                'Personel': r.fullName || r.requester || '',
-                'Proje': r.project || '',
-                'İzin Türü': r.type || '',
-                'Başlangıç': start ? start.toLocaleDateString('tr-TR') : '',
-                'Bitiş': end ? end.toLocaleDateString('tr-TR') : '',
-                'Gün': dayCount,
-                'Gerekçe': r.reason || '',
-                'Durum': r.status || '',
-                'Red Eden': rej ? rej.from : '',
-                'Red Nedeni': rej ? rej.reason : '',
-                'TL Not/İşlem': r.tl || '',
-                'SPV Not/İşlem': r.spv || '',
-                'İK Not/İşlem': r.ik || ''
+                month: document.getElementById('rep-month')?.value || '',
+                status: document.getElementById('rep-status')?.value || '',
+                type: document.getElementById('rep-type')?.value || ''
             };
-        });
-
-        try {
-            const ws = XLSX.utils.json_to_sheet(rows);
-            // Basit kolon genişliği
-            ws['!cols'] = [
-                { wch: 10 }, { wch: 24 }, { wch: 18 }, { wch: 18 },
-                { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 40 },
-                { wch: 14 }, { wch: 10 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 18 }
-            ];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'IzinRapor');
-
-            const suffix = formValues.month ? formValues.month : new Date().toISOString().slice(0, 10);
-            const filename = `Izin_Rapor_${suffix}.xlsx`;
-            XLSX.writeFile(wb, filename);
-
-            Swal.fire('Hazır ✅', `${filtered.length} kayıt indirildi: ${filename}`, 'success');
-        } catch (e) {
-            Swal.fire('Hata', 'Excel oluşturulurken hata oluştu.', 'error');
         }
+    });
+
+    if (!formValues) return;
+
+    Swal.fire({ title: 'Rapor hazırlanıyor…', html: '⏳ Lütfen bekleyin', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    const res = await callApi({ action: 'getRequests' });
+    if (!res || !Array.isArray(res)) {
+        Swal.fire('Hata', 'Kayıtlar alınamadı. (getRequests)', 'error');
+        return;
     }
+
+    const filtered = res.filter(r => {
+        const d = new Date(r.start);
+        if (formValues.month) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            if (`${y}-${m}` !== formValues.month) return false;
+        }
+        if (formValues.type && r.type !== formValues.type) return false;
+        if (formValues.status) {
+            if (formValues.status === 'bekliyor') {
+                if (!['tl_bekliyor', 'spv_bekliyor', 'ik_bekliyor', 'Bekliyor'].includes(r.status)) return false;
+            } else if (r.status !== formValues.status) return false;
+        }
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        Swal.fire('Kayıt Yok', 'Seçtiğiniz filtrelere uygun kayıt bulunamadı.', 'info');
+        return;
+    }
+
+    const rows = filtered.map(r => {
+        const start = r.start ? new Date(r.start) : null;
+        const end = r.end ? new Date(r.end) : null;
+        const dayCount = (r.start && r.end) ? calculateDays(r.start, r.end) : '';
+        const rej = (r.status === 'red') ? getDetailedRejectionInfo(r) : null;
+        return {
+            'ID': r.id || '',
+            'Personel': r.fullName || r.requester || '',
+            'Proje': r.project || '',
+            'İzin Türü': r.type || '',
+            'Başlangıç': start ? start.toLocaleDateString('tr-TR') : '',
+            'Bitiş': end ? end.toLocaleDateString('tr-TR') : '',
+            'Gün': dayCount,
+            'Gerekçe': r.reason || '',
+            'Durum': r.status || '',
+            'Red Eden': rej ? rej.from : '',
+            'Red Nedeni': rej ? rej.reason : '',
+            'TL Not/İşlem': r.tl || '',
+            'SPV Not/İşlem': r.spv || '',
+            'İK Not/İşlem': r.ik || ''
+        };
+    });
+
+    try {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        // Basit kolon genişliği
+        ws['!cols'] = [
+            { wch: 10 }, { wch: 24 }, { wch: 18 }, { wch: 18 },
+            { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 40 },
+            { wch: 14 }, { wch: 10 }, { wch: 40 }, { wch: 18 }, { wch: 18 }, { wch: 18 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'IzinRapor');
+
+        const suffix = formValues.month ? formValues.month : new Date().toISOString().slice(0, 10);
+        const filename = `Izin_Rapor_${suffix}.xlsx`;
+        XLSX.writeFile(wb, filename);
+
+        Swal.fire('Hazır ✅', `${filtered.length} kayıt indirildi: ${filename}`, 'success');
+    } catch (e) {
+        Swal.fire('Hata', 'Excel oluşturulurken hata oluştu.', 'error');
+    }
+}
