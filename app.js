@@ -170,7 +170,8 @@ function initDashboardWithUser(user) {
     }
 
     // RBAC Button (Admin Only)
-    if (role === 'ADMIN') {
+    // Fix: Using uRole (normalized) to be sure
+    if (uRole === 'admin') {
         const btnRbac = document.getElementById('menu-rbac');
         if (btnRbac) btnRbac.style.display = 'block';
     }
@@ -1390,11 +1391,20 @@ async function loadRolePermissions() {
 
 function checkPermission(resource) {
     if (!currentUser) return false;
-    if (currentUser.role === 'ADMIN') return true; // Admin has all permissions
+    // Normalize role check
+    const r = (currentUser.role || '').toLowerCase();
 
-    // Normal kullanıcılar için:
-    // Şimdilik sadece Admin yönetiyor.
-    return true;
+    // 1. ADMIN always true
+    if (r === 'admin') return true;
+
+    // 2. Others: Check if specific permission is granted (TRUE)
+    // If permission is not defined or is false, return FALSE.
+    // Varsayılan olarak kısıtlı.
+    if (window.rolePermissions && window.rolePermissions[r]) {
+        if (window.rolePermissions[r][resource] === true) return true;
+    }
+
+    return false;
 }
 
 window.openPermissionModal = async function () {
