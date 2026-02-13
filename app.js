@@ -1,7 +1,7 @@
 /* 
   app.js (Ultra Güvenli & Token Tabanlı Frontend)
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzPP6GYOHiP6gFdwrBpNtBc9KJSqQ-UE6J-9V9Z2XzES2oW-kfM3G4SDjYCrCorVkVfuQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwNPj6Mj2mPJhUY1-jB1QpM3B9gmTGUt4wJcHLe8a-Xzk5kKPFlTI6eyHXW8nojjIhb/exec';
 
 let currentUser = null;
 
