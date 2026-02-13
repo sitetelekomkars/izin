@@ -120,14 +120,16 @@ function initDashboardWithUser(user) {
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
+    const uRole = (user.role || "").toLowerCase();
+    const isAdmin = uRole === 'admin';
     const isIk = ['İK', 'IK'].includes(user.role);
     const isSup = ['SPV', 'TL'].includes(user.role);
     const isDanisma = (user.role && (user.role.toLowerCase().includes('danışma') || user.role.toLowerCase().includes('danisma')));
 
     if (passLink) passLink.style.display = 'block'; // Everyone can change their own password
-    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma) ? 'block' : 'none'; // Danisma sees it for approved list
-    if (logsLink) logsLink.style.display = isIk ? 'block' : 'none';
-    if (reportLink) reportLink.style.display = isIk ? 'block' : 'none';
+    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma || isAdmin) ? 'block' : 'none'; // Danisma sees it for approved list
+    if (logsLink) logsLink.style.display = isAdmin ? 'block' : 'none';
+    if (reportLink) reportLink.style.display = isAdmin ? 'block' : 'none';
 
     // Önce Görünümü Değiştir, Sonra İçeriği Render Et (Takılmayı Önler)
     switchView('dashboard');
@@ -354,10 +356,12 @@ function renderDashboard(role) {
     const leaveTypesOptions = typesArray.map(type => `<option>${esc(type)}</option>`).join('');
     const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
 
-    const isIk = ['İK', 'IK'].includes(role);
-    const isSup = ['SPV', 'TL'].includes(role);
-    const isDanisma = (role && (role.toLowerCase().includes('danışma') || role.toLowerCase().includes('danisma')));
-    const isManager = isIk || isSup || isDanisma;
+    const uRole = (role || "").toLowerCase();
+    const isIk = uRole.includes('ik');
+    const isSup = uRole === 'spv' || uRole === 'tl';
+    const isDanisma = uRole.includes('danı') || uRole.includes('danis'); // Robust Turkish char check
+    const isAdmin = uRole === 'admin';
+    const isManager = isAdmin || isIk || isSup || isDanisma;
 
     // Herkes (İK hariç) talep oluşturabilir
     let html = `
@@ -826,7 +830,11 @@ function renderPage(page) {
         }
 
         let docAction = '';
-        if (role === 'Danışma' && r.ik === 'Onaylandı') {
+        const uRole = (role || "").toLowerCase();
+        const isAdmin = uRole === 'admin';
+        const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+
+        if ((isDanisma || isAdmin) && r.ik === 'Onaylandı') {
             docAction = `
                 <select class="doc-status-select" onchange="updateDocumentStatus('${r.id}', this.value)">
                     <option value="Bekliyor" ${r.documentStatus === 'Bekliyor' ? 'selected' : ''}>⏳ Bekliyor</option>
