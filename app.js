@@ -119,11 +119,9 @@ function initDashboardWithUser(user) {
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
-    const isMT = ['Temsilci', 'MT'].includes(user.role);
-    const isIk = ['İK', 'IK'].includes(user.role);
-    const isSpv = user.role === 'SPV';
+    const isDanisma = (user.role && (user.role.toLowerCase().includes('danışma') || user.role.toLowerCase().includes('danisma')));
 
-    if (passLink) passLink.style.display = isMT ? 'none' : 'block';
+    if (passLink) passLink.style.display = 'block'; // Everyone can change their own password
     if (mgmtLink) mgmtLink.style.display = (isIk || isSpv) ? 'block' : 'none';
     if (logsLink) logsLink.style.display = isIk ? 'block' : 'none';
     if (reportLink) reportLink.style.display = isIk ? 'block' : 'none';
