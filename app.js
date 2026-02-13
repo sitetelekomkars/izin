@@ -1380,12 +1380,137 @@ window.openReportModal = async function () {
 
 /* === RBAC FUNCTIONS === */
 async function loadRolePermissions() {
-    // Sadece Admin veya yetkili roller için çekilebilir, ama frontend check için herkese çekiyoruz (read-only)
+    // Sadece Admin veya yetkili roller için çekilebilir
     if (currentUser && currentUser.role === 'ADMIN') {
         const res = await callApi({ action: 'getRolePermissions' });
         if (res && res.status !== 'error') {
-            window.rolePermissions = res;
+            // New format: { permissions: {...}, allRoles: [...] }
+            if (res.permissions) {
+                window.rolePermissions = res.permissions;
+                window.dynamicRoles = res.allRoles || [];
+            } else {
+                window.rolePermissions = res;
+                window.dynamicRoles = [];
+            }
         }
+    }
+}
+
+function checkPermission(resource) {
+    if (!currentUser) return false;
+    // Normalize role check
+    const r = (currentUser.role || '').toLowerCase();
+
+    // 1. ADMIN always true
+    if (r === 'admin') return true;
+
+    // 2. Others: Check if specific permission is granted (TRUE)
+    if (window.rolePermissions && window.rolePermissions[r]) {
+        if (window.rolePermissions[r][resource] === true) return true;
+    }
+
+    return false;
+}
+
+window.openPermissionModal = async function () {
+    Swal.fire({ title: 'Yetki Matrisi', html: '⏳ Yükleniyor...', width: 950, showConfirmButton: false, showCloseButton: true });
+
+    await loadRolePermissions(); // Refresh
+    const permissions = window.rolePermissions || {};
+
+    // Dynamic roles from backend OR fallback
+    const backendRoles = window.dynamicRoles || [];
+    const sheetRoles = Object.keys(permissions);
+
+    // Merge and unique
+    let allRoles = [...new Set([...backendRoles, ...sheetRoles])].map(r => r.trim()).filter(r => r).sort();
+
+    // If empty (first run), add defaults
+    if (allRoles.length === 0) allRoles = ['Admin', 'İK', 'TL', 'SPV', 'Danışma'];
+
+    let html = `
+        <div class="alert-info" style="text-align:left; font-size:0.85rem; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+            <span>ℹ️ Rolleri ve yetkilerini ayarlayın. Sonra <b>KAYDET</b> butonuna basın.</span>
+            <button onclick="saveRolePermissions()" class="btn-save-perm">💾 Değişiklikleri Kaydet</button>
+        </div>
+        <div class="permission-table-container">
+            <table class="permission-table" id="rbac-table">
+                <thead>
+                    <tr>
+                        <th style="width:150px;">Rol / Kaynak</th>
+                        ${window.permissionResources.map(r => `<th>${r.label}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    allRoles.forEach(role => {
+        html += `<tr><td><b>${esc(role)}</b></td>`;
+        window.permissionResources.forEach(res => {
+            const rKey = role.toLowerCase();
+            const resKey = res.key.toLowerCase();
+
+            // Default true? Check sheet value.
+            let isChecked = true;
+            if (permissions[rKey] && permissions[rKey][resKey] === false) isChecked = false;
+
+            // No onchange immediate call
+            // Using data attributes for batch save
+            html += `
+                <td>
+                    <label class="switch">
+                        <input type="checkbox" class="perm-check" 
+                            data-role="${esc(role)}" 
+                            data-res="${res.key}" 
+                            ${isChecked ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </td>
+            `;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table></div>
+             <div style="margin-top:15px; text-align:right;">
+                <button onclick="saveRolePermissions()" class="btn-save-perm">💾 Değişiklikleri Kaydet</button>
+             </div>`;
+
+    Swal.update({ html: html });
+}
+
+window.saveRolePermissions = async function () {
+    const checkboxes = document.querySelectorAll('.perm-check');
+    const updates = [];
+
+    checkboxes.forEach(cb => {
+        updates.push({
+            role: cb.getAttribute('data-role'),
+            resource: cb.getAttribute('data-res'),
+            value: cb.checked
+        });
+    });
+
+    const btn = document.querySelector('.btn-save-perm');
+    if (btn) { btn.disabled = true; btn.innerText = 'Kaydediliyor...'; }
+
+    const res = await callApi({
+        action: 'updateRolePermissionsBatch',
+        updates: updates
+    });
+
+    if (res.status === 'success') {
+        Swal.fire('Başarılı', 'Tüm yetkiler kaydedildi.', 'success');
+        // Refresh local cache
+        updates.forEach(u => {
+            const rKey = u.role.toLowerCase();
+            const resKey = u.resource.toLowerCase();
+            if (!window.rolePermissions[rKey]) window.rolePermissions[rKey] = {};
+            window.rolePermissions[rKey][resKey] = u.value;
+        });
+    } else {
+        Swal.fire('Hata', 'Kaydedilirken sorun oluştu.', 'error');
+        if (btn) { btn.disabled = false; btn.innerText = '💾 Değişiklikleri Kaydet'; }
     }
 }
 
