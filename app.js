@@ -109,9 +109,10 @@ function initDashboardWithUser(user) {
     const dRole = document.getElementById('displayRole');
     const dAvat = document.getElementById('userAvatar');
 
-    if (dUser) dUser.innerText = user.user;
+    const displayName = user.fullName || user.user;
+    if (dUser) dUser.innerText = displayName;
     if (dRole) dRole.innerText = user.role;
-    if (dAvat) dAvat.innerText = user.user.charAt(0).toUpperCase();
+    if (dAvat) dAvat.innerText = displayName.charAt(0).toUpperCase();
 
     // Menü Görünürlük Ayarları
     const mgmtLink = document.getElementById('menu-mgmt');
@@ -120,11 +121,11 @@ function initDashboardWithUser(user) {
     const passLink = document.getElementById('menu-pass');
 
     const isIk = ['İK', 'IK'].includes(user.role);
-    const isSpv = user.role === 'SPV';
+    const isSup = ['SPV', 'TL'].includes(user.role);
     const isDanisma = (user.role && (user.role.toLowerCase().includes('danışma') || user.role.toLowerCase().includes('danisma')));
 
     if (passLink) passLink.style.display = 'block'; // Everyone can change their own password
-    if (mgmtLink) mgmtLink.style.display = (isIk || isSpv) ? 'block' : 'none';
+    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma) ? 'block' : 'none'; // Danisma sees it for approved list
     if (logsLink) logsLink.style.display = isIk ? 'block' : 'none';
     if (reportLink) reportLink.style.display = isIk ? 'block' : 'none';
 
@@ -595,6 +596,7 @@ window.loadUserListInternal = async function () {
                 <td style="padding:10px;">
                     <button onclick="resetPass('${esc(u.user)}')" title="Şifre Sıfırla" class="action-btn" style="background:#f59e0b; width:auto; padding:5px 10px;">🔑</button>
                     ${isIk ? `
+                        <button onclick="editUserDetails('${esc(u.user)}', '${esc(u.role)}', '${esc(u.project)}')" title="Rol/Proje Düzenle" class="action-btn" style="background:#10b981; width:auto; padding:5px 10px; margin-left:5px;">✏️</button>
                         <button onclick="toggle2faStatus('${esc(u.user)}', '${u.twoFactor === 'AKTİF' ? 'PASİF' : 'AKTİF'}')" title="2FA Değiştir" class="action-btn" style="background:#6366f1; width:auto; padding:5px 10px; margin-left:5px;">🛡️</button>
                         <button onclick="delUser('${esc(u.user)}')" title="Kullanıcı Sil" class="action-btn reject" style="width:auto; padding:5px 10px; margin-left:5px;">🗑️</button>
                     ` : ''}
@@ -651,6 +653,40 @@ window.delUser = async function (targetUser) {
     await callApi({ action: 'deleteUser', targetUser });
     Swal.fire('Silindi', 'Kullanıcı silindi', 'success');
     loadUserListInternal();
+}
+
+window.editUserDetails = async function (targetUser, oldRole, oldProj) {
+    const { value: formValues } = await Swal.fire({
+        title: 'Kullanıcı Düzenle',
+        html:
+            `<label>Rol:</label><input id="edit-role" class="swal2-input" value="${oldRole}">` +
+            `<label>Proje:</label><input id="edit-proj" class="swal2-input" value="${oldProj}">`,
+        focusConfirm: false,
+        showCancelButton: true,
+        preConfirm: () => {
+            return {
+                newRole: document.getElementById('edit-role').value,
+                newProject: document.getElementById('edit-proj').value
+            }
+        }
+    });
+
+    if (formValues) {
+        Swal.showLoading();
+        const res = await callApi({
+            action: 'updateUserDetails',
+            targetUser: targetUser,
+            newRole: formValues.newRole,
+            newProject: formValues.newProject
+        });
+
+        if (res.status === 'success') {
+            Swal.fire('Başarılı', 'Kullanıcı güncellendi', 'success');
+            loadUserListInternal();
+        } else {
+            Swal.fire('Hata', res.message || 'Yetkiniz olmayabilir', 'error');
+        }
+    }
 }
 
 window.toggle2faStatus = async function (targetUser, newStatus) {
