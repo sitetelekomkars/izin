@@ -523,6 +523,46 @@ tr:hover td {
     color: #721c24;
 }
 
+/* ===== DOCUMENT STATUS BADGES ===== */
+.badge-doc {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge-doc-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-doc-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.badge-doc-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.doc-status-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    font-size: 0.85rem;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.doc-status-select:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
+}
+
 /* ===== ACTION BUTTONS ===== */
 .action-btns {
     display: flex;
@@ -944,6 +984,7 @@ body:hover .signature {
         padding: 0;
     }
 }
+
 /* === APPLE iOS INSTALL PROMPT === */
 .ios-prompt {
     position: fixed;
@@ -954,11 +995,11 @@ body:hover .signature {
     backdrop-filter: blur(15px);
     border-radius: 20px;
     padding: 22px;
-    box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
     z-index: 20000;
     display: none;
     animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .ios-prompt-header {
@@ -972,29 +1013,40 @@ body:hover .signature {
     width: 60px;
     height: 60px;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.ios-prompt h4 { font-weight: 800; color: #1a202c; margin: 0; font-size: 1.2rem; }
-.ios-prompt p { font-size: 0.95rem; color: #4a5568; margin: 5px 0 0 0; line-height: 1.5; }
-
-.ios-prompt-steps { 
-    margin-top: 20px; 
-    border-top: 1px solid #f1f5f9; 
-    padding-top: 20px; 
+.ios-prompt h4 {
+    font-weight: 800;
+    color: #1a202c;
+    margin: 0;
+    font-size: 1.2rem;
 }
 
-.ios-step { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    margin-bottom: 12px; 
-    font-weight: 600; 
-    font-size: 1rem; 
-    color: #2d3748; 
+.ios-prompt p {
+    font-size: 0.95rem;
+    color: #4a5568;
+    margin: 5px 0 0 0;
+    line-height: 1.5;
 }
 
-.ios-step span.icon { 
+.ios-prompt-steps {
+    margin-top: 20px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 20px;
+}
+
+.ios-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #2d3748;
+}
+
+.ios-step span.icon {
     font-size: 1.6rem;
     display: flex;
     align-items: center;
@@ -1002,15 +1054,15 @@ body:hover .signature {
     width: 30px;
 }
 
-.ios-close-btn { 
-    margin-top: 10px; 
-    width: 100%; 
-    padding: 14px; 
-    background: #0056b3; 
-    color: white; 
-    border: none; 
-    border-radius: 12px; 
-    font-weight: 700; 
+.ios-close-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 14px;
+    background: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
     transition: background 0.2s;
@@ -1030,19 +1082,43 @@ body:hover .signature {
     align-items: center;
     gap: 12px;
     z-index: 30000;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes slideDown {
-    from { transform: translateY(-100px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
-.android-prompt img { width: 40px; height: 40px; border-radius: 8px; }
-.android-prompt-text { flex: 1; }
-.android-prompt-text h4 { margin: 0; font-size: 0.9rem; font-weight: 700; }
-.android-prompt-text p { margin: 2px 0 0; font-size: 0.75rem; opacity: 0.8; }
+.android-prompt img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.android-prompt-text {
+    flex: 1;
+}
+
+.android-prompt-text h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.android-prompt-text p {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
 
 .android-install-btn {
     background: #0984e3;
