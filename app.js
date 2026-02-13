@@ -468,6 +468,7 @@ function renderDashboard(role) {
                     <th>PERSONEL</th>
                     <th>TARİHLER / GEREKÇE</th>
                     <th>TÜR</th>
+                    <th>EVRAK</th>
                     <th>DURUM / İŞLEM</th>
                 </tr>
             </thead>
@@ -707,11 +708,18 @@ function applyFilters() {
 }
 
 function getStatusBadge(status) {
-    if (status === 'onaylandi') return '<span class="status st-green">✅ Onaylandı</span>';
-    if (status === 'red') return '<span class="status st-red">❌ Reddedildi</span>';
-    if (status === 'spv_bekliyor') return '<span class="status st-orange">⏳ SPV Onayı Bekliyor</span>';
-    if (status === 'ik_bekliyor') return '<span class="status st-orange">⏳ İK Onayı Bekliyor</span>';
+    const s = status ? status.toLowerCase() : '';
+    if (s === 'onaylandi' || s === 'onaylandı') return '<span class="status st-green">✅ Onaylandı</span>';
+    if (s === 'red' || s === 'reddedildi') return '<span class="status st-red">❌ Reddedildi</span>';
+    if (s === 'spv_bekliyor') return '<span class="status st-orange">⏳ SPV Onayı Bekliyor</span>';
+    if (s === 'ik_bekliyor') return '<span class="status st-orange">⏳ İK Onayı Bekliyor</span>';
     return '<span class="status st-gray">⏳ Bekliyor</span>';
+}
+
+function getDocStatusClass(status) {
+    if (status === 'İmzalandı') return 'success';
+    if (status === 'İmzalanmadı') return 'danger';
+    return 'warning';
 }
 
 function getDetailedRejectionInfo(r) {
@@ -733,7 +741,7 @@ function renderPage(page) {
     if (!tbody) return;
 
     if (!filteredRequests || filteredRequests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:#999;">Kayıt bulunamadı</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#999;">Kayıt bulunamadı</td></tr>';
         document.getElementById('page-info').innerText = '-';
         return;
     }
@@ -773,9 +781,18 @@ function renderPage(page) {
             }
         }
 
-        const reasonHtml = r.reason
-            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r.reason)}</div>`
-            : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe yok</div>';
+        let docAction = '';
+        if (role === 'Danışma' && r.ik === 'Onaylandı') {
+            docAction = `
+                <select class="doc-status-select" onchange="updateDocumentStatus('${r.id}', this.value)">
+                    <option value="Bekliyor" ${r.documentStatus === 'Bekliyor' ? 'selected' : ''}>⏳ Bekliyor</option>
+                    <option value="İmzalandı" ${r.documentStatus === 'İmzalandı' ? 'selected' : ''}>✔️ İmzalandı</option>
+                    <option value="İmzalanmadı" ${r.documentStatus === 'İmzalanmadı' ? 'selected' : ''}>✖️ İmzalanmadı</option>
+                </select>`;
+        } else {
+            const docClass = getDocStatusClass(r.documentStatus);
+            docAction = `<span class="badge-doc badge-doc-${docClass}">${esc(r.documentStatus || 'Bekliyor')}</span>`;
+        }
 
         return `
             <tr>
@@ -785,6 +802,7 @@ function renderPage(page) {
                     ${reasonHtml}
                 </td>
                 <td><b>${esc(r.type)}</b></td>
+                <td>${docAction}</td>
                 <td>${actionHtml}</td>
             </tr>
         `;
@@ -820,6 +838,23 @@ window.processRequest = async function (id, decision) {
     const res = await callApi({ action: 'updateStatus', id, decision, reason });
     if (res.status === 'success') {
         Swal.fire('Başarılı', 'İşlem tamamlandı', 'success');
+        loadAdminRequests();
+    } else {
+        Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+    }
+}
+
+window.updateDocumentStatus = async function (id, status) {
+    Swal.showLoading();
+    const res = await callApi({ action: 'updateDocumentStatus', id, status });
+    if (res.status === 'success') {
+        Swal.fire({
+            icon: 'success',
+            title: 'Güncellendi',
+            text: 'Evrak durumu başarıyla kaydedildi.',
+            timer: 1500,
+            showConfirmButton: false
+        });
         loadAdminRequests();
     } else {
         Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
