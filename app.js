@@ -420,10 +420,9 @@ function renderDashboard(role) {
         `;
 
         setTimeout(() => {
-            const savedFullname = localStorage.getItem('mtd_fullname');
             const savedSicil = localStorage.getItem('mtd_sicil');
-            if (savedFullname) document.getElementById('fullname').value = savedFullname;
             if (savedSicil) document.getElementById('sicil').value = savedSicil;
+            // Name is now auto-filled from currentUser
         }, 100);
 
         return; // CRITICAL: MT görünümünden sonra yönetici görünümüne geçme!
@@ -486,18 +485,20 @@ function renderDashboard(role) {
 
 /* === USER MANAGEMENT === */
 window.openUserMgmtModal = function () {
-    const isIk = ['İK', 'IK'].includes(currentUser.role);
-    const isSpv = currentUser.role === 'SPV';
+    const role = currentUser.role;
+    const isIk = ['İK', 'IK'].includes(role);
+    const isSup = ['SPV', 'TL'].includes(role);
 
     let html = `
         <div class="mgmt-tabs">
-            <button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>
-            <button class="mgmt-tab-btn" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>
+            ${isIk ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
+            <button class="mgmt-tab-btn ${!isIk ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>
         </div>
+        ${isIk ? `
         <div id="mgmt-tab-add" class="mgmt-tab-content">
             <div class="form-group">
-                <label>Kullanıcı Adı</label>
-                <input type="text" id="new-u-name" class="swal2-input" placeholder="kullanici.adi">
+                <label>Kullanıcı Adı (TC Son 6)</label>
+                <input type="text" id="new-u-name" class="swal2-input" placeholder="Örn: 123456">
             </div>
             <div class="form-group">
                 <label>E-Posta (2FA İçin)</label>
@@ -517,6 +518,10 @@ window.openUserMgmtModal = function () {
                     <input type="text" id="new-u-proj" class="swal2-input" placeholder="Proje adı">
                 </div>
                 <div class="form-group">
+                    <label>PERSONEL AD SOYAD</label>
+                    <input type="text" id="new-u-fullname" class="swal2-input" placeholder="Ad Soyad">
+                </div>
+                <div class="form-group">
                     <label>Güvenlik (2FA)</label>
                     <select id="new-u-2fa" class="swal2-input">
                         <option value="PASİF">🔴 Kapalı (Sadece Şifre)</option>
@@ -528,7 +533,8 @@ window.openUserMgmtModal = function () {
             `}
             <button class="btn-primary" onclick="submitAddUser()" style="margin-top:20px;">Ekle (İlk Şifre: 1234)</button>
         </div>
-        <div id="mgmt-tab-list" class="mgmt-tab-content hidden">
+        ` : ''}
+        <div id="mgmt-tab-list" class="mgmt-tab-content ${!isIk ? '' : 'hidden'}">
             <div id="user-list-container">Yükleniyor...</div>
         </div>
     `;
@@ -572,7 +578,8 @@ window.loadUserListInternal = async function () {
         <table style="width:100%; border-collapse: collapse;">
             <thead style="background:#f8f9fa;">
                 <tr>
-                    <th style="padding:10px;">Kullanıcı</th>
+                    <th style="padding:10px;">AD SOYAD</th>
+                    <th style="padding:10px;">TC / KULLANICI</th>
                     <th style="padding:10px;">Rol</th>
                     <th style="padding:10px;">Proje</th>
                     <th style="padding:10px;">2FA</th>
@@ -585,7 +592,8 @@ window.loadUserListInternal = async function () {
     users.forEach(u => {
         table += `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px;">${esc(u.user)}</td>
+                <td style="padding:10px;"><strong>${esc(u.fullName || '-')}</strong></td>
+                <td style="padding:10px; font-size:0.85rem; color:#666;">${esc(u.user)}</td>
                 <td style="padding:10px;">${esc(u.role)}</td>
                 <td style="padding:10px;">${esc(u.project)}</td>
                 <td style="padding:10px;">
