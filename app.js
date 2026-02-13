@@ -119,6 +119,8 @@ function initDashboardWithUser(user) {
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
+    const isIk = ['İK', 'IK'].includes(user.role);
+    const isSpv = user.role === 'SPV';
     const isDanisma = (user.role && (user.role.toLowerCase().includes('danışma') || user.role.toLowerCase().includes('danisma')));
 
     if (passLink) passLink.style.display = 'block'; // Everyone can change their own password
