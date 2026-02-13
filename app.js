@@ -794,6 +794,10 @@ function renderPage(page) {
             docAction = `<span class="badge-doc badge-doc-${docClass}">${esc(r.documentStatus || 'Bekliyor')}</span>`;
         }
 
+        const reasonHtml = r.reason
+            ? `<div style="color:#495057; margin-top:6px; font-size:0.85rem;">📝 ${esc(r.reason)}</div>`
+            : '<div style="color:#adb5bd; margin-top:6px; font-size:0.85rem; font-style:italic;">Gerekçe yok</div>';
+
         return `
             <tr>
                 <td><b>${esc(r.fullName || r.requester)}</b><br><span class="badge-project">${esc(r.project)}</span></td>
