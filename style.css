@@ -1248,3 +1248,25 @@ input:checked+.slider:before {
     border-radius: 6px;
     font-size: 0.8rem;
 }
+
+/* === RBAC SAVE BUTTON === */
+.btn-save-perm {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.btn-save-perm:hover {
+    background-color: #27ae60;
+}
+
+.btn-save-perm:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
