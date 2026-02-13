@@ -131,6 +131,7 @@ function initDashboardWithUser(user) {
     if (logsLink) logsLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
     if (reportLink) reportLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
 
+    switchView('dashboard');
     renderDashboard(user.role);
 }
 
@@ -364,6 +365,10 @@ function renderDashboard(role) {
     const isIk = uRole.includes('ik');
     const isSup = uRole === 'spv' || uRole === 'tl';
     const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+    const typesArray = Array.isArray(window.leaveTypes) ? window.leaveTypes : ['Yıllık İzin'];
+    const leaveTypesOptions = typesArray.map(type => `<option>${esc(type)}</option>`).join('');
+    const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
+
     const isAdmin = uRole === 'admin';
     const isManager = isAdmin || isIk || isSup || isDanisma;
 
