@@ -74,10 +74,20 @@ function closeIosPrompt() {
 window.addEventListener('load', () => {
     checkPwaPrompts();
 });
-let allAdminRequests = [];
 let filteredRequests = [];
+let allAdminRequests = [];
 let currentPage = 1;
 const itemsPerPage = 10;
+
+/* === RBAC GLOBALS === */
+window.rolePermissions = {}; // { 'role': { 'resource': true/false } }
+window.permissionResources = [
+    { key: 'admin_panel', label: 'Admin Paneli' },
+    { key: 'export_excel', label: 'Excel Rapor' },
+    { key: 'view_logs', label: 'Sistem Logları' },
+    { key: 'manage_users', label: 'Personel Yönetimi' },
+    { key: 'approve_reject', label: 'Onay/Ret İşlemi' }
+];
 
 // SAYFA YÜKLENDİĞİNDE
 window.addEventListener('DOMContentLoaded', async () => {
@@ -134,6 +144,40 @@ function initDashboardWithUser(user) {
 
     switchView('dashboard');
     renderDashboard(user.role);
+
+    // RBAC: Update menu visibility based on permissions
+    const role = (user.role || '').toUpperCase();
+
+    // Admin Panel Linki
+    const btnAdmin = document.getElementById('btn-admin-panel');
+    if (btnAdmin) {
+        // Admin or Has Permission
+        if (role === 'ADMIN' || checkPermission('admin_panel')) {
+            btnAdmin.classList.remove('hidden');
+        } else {
+            btnAdmin.classList.add('hidden');
+        }
+    }
+
+    // Dropdown Menu Items
+    if (role === 'ADMIN' || (['İK', 'IK'].includes(uRole))) {
+        if (checkPermission('view_logs')) document.getElementById('menu-logs').style.display = 'block';
+        if (checkPermission('manage_users')) document.getElementById('menu-mgmt').style.display = 'block';
+    }
+
+    if (role === 'ADMIN' || uRole.includes('ik')) {
+        if (checkPermission('export_excel')) document.getElementById('menu-report').style.display = 'block';
+    }
+
+    // RBAC Button (Admin Only)
+    if (role === 'ADMIN') {
+        const btnRbac = document.getElementById('menu-rbac');
+        if (btnRbac) btnRbac.style.display = 'block';
+    }
+
+    loadLeaveTypes();
+    // Load Permissions in background if not loaded
+    loadRolePermissions();
 }
 
 // === UTILITY FUNCTIONS === */
@@ -822,25 +866,35 @@ function renderPage(page) {
         const role = (currentUser.role || '').toUpperCase();
         const s = r.status;
 
-        if (s === 'tl_bekliyor' && role === 'TL') {
-            actionHtml = `
-                <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                </div>`;
-        } else if (s === 'spv_bekliyor' && role === 'SPV') {
-            actionHtml = `
-                <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                </div>`;
-        } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
-            actionHtml = `
-                <div class="action-btns">
-                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                </div>`;
+        if (checkPermission('approve_reject')) {
+            if (s === 'tl_bekliyor' && role === 'TL') {
+                actionHtml = `
+                    <div class="action-btns">
+                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    </div>`;
+            } else if (s === 'spv_bekliyor' && role === 'SPV') {
+                actionHtml = `
+                    <div class="action-btns">
+                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    </div>`;
+            } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
+                actionHtml = `
+                    <div class="action-btns">
+                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                    </div>`;
+            } else {
+                if (s === 'red') {
+                    const ri = getDetailedRejectionInfo(r);
+                    actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
+                } else {
+                    actionHtml = getStatusBadge(s);
+                }
+            }
         } else {
+            // If no approve_reject permission, just show status
             if (s === 'red') {
                 const ri = getDetailedRejectionInfo(r);
                 actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
@@ -848,6 +902,7 @@ function renderPage(page) {
                 actionHtml = getStatusBadge(s);
             }
         }
+
 
         let docAction = '';
         const uRole = (role || "").toLowerCase();
@@ -1145,6 +1200,10 @@ window.showTab = function (id, btn) {
 
 /* === SİSTEM LOGLARI (DETAYLI) === */
 window.openSystemLogs = async function () {
+    if (!checkPermission('view_logs')) {
+        Swal.fire('Yetki Yok', 'Bu işlemi yapmaya yetkiniz bulunmamaktadır.', 'warning');
+        return;
+    }
     Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
     const res = await callApi({ action: 'getLogs' });
     if (res.status === 'error' || !Array.isArray(res)) { Swal.update({ html: 'Loglar alınamadı.' }); return; }
@@ -1176,6 +1235,10 @@ window.openSystemLogs = async function () {
 
 /* === EXCEL RAPOR (İK) === */
 window.openReportModal = async function () {
+    if (!checkPermission('export_excel')) {
+        Swal.fire('Yetki Yok', 'Bu işlemi yapmaya yetkiniz bulunmamaktadır.', 'warning');
+        return;
+    }
     // Menü zaten İK için açılıyor ama yine de güvenli kontrol
     const isIk = currentUser && ['İK', 'IK'].includes(currentUser.role);
     if (!isIk) {
@@ -1311,5 +1374,100 @@ window.openReportModal = async function () {
         Swal.fire('Hazır ✅', `${filtered.length} kayıt indirildi: ${filename}`, 'success');
     } catch (e) {
         Swal.fire('Hata', 'Excel oluşturulurken hata oluştu.', 'error');
+    }
+}
+
+/* === RBAC FUNCTIONS === */
+async function loadRolePermissions() {
+    // Sadece Admin veya yetkili roller için çekilebilir, ama frontend check için herkese çekiyoruz (read-only)
+    if (currentUser && currentUser.role === 'ADMIN') {
+        const res = await callApi({ action: 'getRolePermissions' });
+        if (res && res.status !== 'error') {
+            window.rolePermissions = res;
+        }
+    }
+}
+
+function checkPermission(resource) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'ADMIN') return true; // Admin has all permissions
+
+    // Normal kullanıcılar için:
+    // Şimdilik sadece Admin yönetiyor.
+    return true;
+}
+
+window.openPermissionModal = async function () {
+    Swal.fire({ title: 'Yetki Matrisi', html: '⏳ Yükleniyor...', width: 900, showConfirmButton: false, showCloseButton: true });
+
+    await loadRolePermissions(); // Refresh
+    const permissions = window.rolePermissions || {};
+
+    const roles = ['İK', 'TL', 'SPV', 'Danışma', 'MT', 'Kalite', 'Bilgi İşlem', 'Telesatis', 'Chat', 'IstChat'];
+    // Sheet'ten gelen roller de olabilir
+    const sheetRoles = Object.keys(permissions);
+    const allRoles = [...new Set([...roles, ...sheetRoles])].sort();
+
+    let html = `
+        <div class="alert-info" style="text-align:left; font-size:0.85rem; margin-bottom:15px;">
+            ℹ️ Yetkileri açıp kapatmak için anahtarları kullanın. Değişiklikler anında kaydedilir.
+        </div>
+        <div class="permission-table-container">
+            <table class="permission-table">
+                <thead>
+                    <tr>
+                        <th style="width:150px;">Rol / Kaynak</th>
+                        ${window.permissionResources.map(r => `<th>${r.label}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    allRoles.forEach(role => {
+        html += `<tr><td><b>${esc(role)}</b></td>`;
+        window.permissionResources.forEach(res => {
+            const rKey = role.toLowerCase();
+            const resKey = res.key.toLowerCase();
+            // Default true. Check sheet value.
+            let isChecked = true;
+            if (permissions[rKey] && permissions[rKey][resKey] === false) isChecked = false;
+
+            // Toggle ID: role:resource
+            html += `
+                <td>
+                    <label class="switch">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                            onchange="toggleRolePermission('${role}', '${res.key}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </td>
+            `;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+
+    Swal.update({ html: html });
+}
+
+window.toggleRolePermission = async function (role, resource, value) {
+    const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+
+    const res = await callApi({
+        action: 'updateRolePermission',
+        role: role,
+        resource: resource,
+        value: value
+    });
+
+    if (res.status === 'success') {
+        const rKey = role.toLowerCase();
+        const resKey = resource.toLowerCase();
+        if (!window.rolePermissions[rKey]) window.rolePermissions[rKey] = {};
+        window.rolePermissions[rKey][resKey] = value;
+        toast.fire({ icon: 'success', title: 'Kaydedildi' });
+    } else {
+        toast.fire({ icon: 'error', title: 'Hata oluştu' });
     }
 }
