@@ -1423,7 +1423,11 @@ window.openPermissionModal = async function () {
     const sheetRoles = Object.keys(permissions);
 
     // Merge and unique
-    let allRoles = [...new Set([...backendRoles, ...sheetRoles])].map(r => r.trim()).filter(r => r).sort();
+    // Merge and unique
+    let allRoles = [...new Set([...backendRoles, ...sheetRoles])]
+        .map(r => r.trim())
+        .filter(r => r && r.toLowerCase() !== 'role' && r.toLowerCase() !== 'undefined' && r.toLowerCase() !== 'null' && r.length > 1)
+        .sort();
 
     // If empty (first run), add defaults
     if (allRoles.length === 0) allRoles = ['Admin', 'İK', 'TL', 'SPV', 'Danışma'];
