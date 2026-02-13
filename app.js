@@ -115,28 +115,36 @@ function initDashboardWithUser(user) {
     if (dAvat) dAvat.innerText = displayName.charAt(0).toUpperCase();
 
     // Menü Görünürlük Ayarları
+    const uRole = normalizeText(user.role);
+    const isAdmin = uRole === 'admin';
+    const isIk = uRole.includes('ik');
+    const isSup = uRole === 'spv' || uRole === 'tl';
+    const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+
     const mgmtLink = document.getElementById('menu-mgmt');
     const logsLink = document.getElementById('menu-logs');
     const reportLink = document.getElementById('menu-report');
     const passLink = document.getElementById('menu-pass');
 
-    const uRole = (user.role || "").toLowerCase();
-    const isAdmin = uRole === 'admin';
-    const isIk = ['İK', 'IK'].includes(user.role);
-    const isSup = ['SPV', 'TL'].includes(user.role);
-    const isDanisma = (user.role && (user.role.toLowerCase().includes('danışma') || user.role.toLowerCase().includes('danisma')));
+    if (passLink) passLink.style.display = 'block';
+    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma || isAdmin) ? 'block' : 'none';
+    if (logsLink) logsLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
+    if (reportLink) reportLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
 
-    if (passLink) passLink.style.display = 'block'; // Everyone can change their own password
-    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma || isAdmin) ? 'block' : 'none'; // Danisma sees it for approved list
-    if (logsLink) logsLink.style.display = isAdmin ? 'block' : 'none';
-    if (reportLink) reportLink.style.display = isAdmin ? 'block' : 'none';
-
-    // Önce Görünümü Değiştir, Sonra İçeriği Render Et (Takılmayı Önler)
-    switchView('dashboard');
     renderDashboard(user.role);
 }
 
-/* === UTILITY FUNCTIONS === */
+// === UTILITY FUNCTIONS === */
+function normalizeText(t) {
+    if (!t) return "";
+    return String(t)
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'i')
+        .replace(/ı/g, 'i')
+        .toLowerCase()
+        .trim();
+}
+
 function esc(str) {
     if (!str) return '';
     return String(str)
@@ -352,14 +360,10 @@ function renderDashboard(role) {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
 
-    const typesArray = Array.isArray(window.leaveTypes) ? window.leaveTypes : ['Yıllık İzin'];
-    const leaveTypesOptions = typesArray.map(type => `<option>${esc(type)}</option>`).join('');
-    const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
-
-    const uRole = (role || "").toLowerCase();
+    const uRole = normalizeText(role);
     const isIk = uRole.includes('ik');
     const isSup = uRole === 'spv' || uRole === 'tl';
-    const isDanisma = uRole.includes('danı') || uRole.includes('danis'); // Robust Turkish char check
+    const isDanisma = uRole.includes('danı') || uRole.includes('danis');
     const isAdmin = uRole === 'admin';
     const isManager = isAdmin || isIk || isSup || isDanisma;
 
