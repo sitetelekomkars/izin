@@ -696,19 +696,26 @@ tr:hover td {
         font-size: 14px !important;
     }
 
-    /* TABLOYU KARTLARA DÖNÜŞTÜR */
-    table,
-    thead,
-    tbody,
-    th,
-    td,
-    tr {
+    /* TABLOYU KARTLARA DÖNÜŞTÜR (Sadece Admin ve Rapor Tablosu) */
+    #admin-table,
+    #admin-table thead,
+    #admin-table tbody,
+    #admin-table th,
+    #admin-table td,
+    #admin-table tr,
+    #rep-table,
+    #rep-table thead,
+    #rep-table tbody,
+    #rep-table th,
+    #rep-table td,
+    #rep-table tr {
         display: block;
         width: 100%;
         border: none !important;
     }
 
-    thead {
+    #admin-table thead,
+    #rep-table thead {
         display: none;
     }
 
