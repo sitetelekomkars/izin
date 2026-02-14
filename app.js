@@ -836,10 +836,12 @@ window.resetUserPassword = async function (userId, username) {
 
     try {
         // Google Apps Script API'yi çağır
+        // 'text/plain' kullanıyoruz çünkü 'application/json' preflight (OPTIONS) tetikler ve GAS bunu desteklemez
         const response = await fetch(PASSWORD_RESET_API_URL, {
             method: 'POST',
+            mode: 'cors',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain'
             },
             body: JSON.stringify({
                 action: 'reset_password',
