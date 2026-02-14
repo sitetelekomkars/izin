@@ -570,8 +570,8 @@ function renderDashboard(role) {
 
 /* === USER MANAGEMENT === */
 window.openUserMgmtModal = function () {
-    const role = currentUser.role;
-    const isIk = ['İK', 'IK'].includes(role);
+    const role = (currentUser.role || '').toUpperCase();
+    const isIk = ['İK', 'IK', 'ADMIN'].includes(role); // ADMIN de ekleme yapabilir
     const isSup = ['SPV', 'TL'].includes(role);
 
     let html = `
@@ -674,7 +674,8 @@ window.loadUserListInternal = async function () {
             return;
         }
 
-        const isIk = ['İK', 'IK'].includes(currentUser.role);
+        const uRole = (currentUser.role || '').toUpperCase();
+        const isIk = ['İK', 'IK', 'ADMIN'].includes(uRole);
 
         let table = `
             <table style="width:100%; border-collapse: collapse;">
@@ -1335,9 +1336,10 @@ window.openReportModal = async function () {
         return;
     }
     // Menü zaten İK için açılıyor ama yine de güvenli kontrol
-    const isIk = currentUser && ['İK', 'IK'].includes(currentUser.role);
-    if (!isIk) {
-        Swal.fire('Yetki Yok', 'Excel raporu sadece İK rolü tarafından alınabilir.', 'warning');
+    const uRole = (currentUser.role || '').toUpperCase();
+    const isIk = ['İK', 'IK', 'ADMIN'].includes(uRole);
+    if (!isIk && uRole !== 'ADMIN') {
+        Swal.fire('Yetki Yok', 'Excel raporu sadece İK ve Yönetici rolü tarafından alınabilir.', 'warning');
         return;
     }
 
