@@ -2,7 +2,7 @@
   sw.js - Production Service Worker with Offline Support
 */
 
-const CACHE_NAME = 'izin-v2.0';
+const CACHE_NAME = 'izin-v3.0';
 const ASSETS = [
     '/index.html',
     '/style.css?v=12', // Match version in HTML
@@ -85,3 +85,4 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+
