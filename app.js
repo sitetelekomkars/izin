@@ -918,12 +918,16 @@ async function loadAdminRequests() {
         if (!isFullAccess) {
             const scopes = currentUser.managed_scopes || [];
             mappedRequests = mappedRequests.filter(r => {
+                // Normalize for comparison
+                const rProj = (r.project || '').trim().toLocaleUpperCase('tr-TR');
+                const uProj = (currentUser.project || '').trim().toLocaleUpperCase('tr-TR');
+
                 // 1. If user has specific managed scopes, check if project is in list
                 if (scopes.length > 0) {
-                    return scopes.includes(r.project);
+                    return scopes.some(s => s.trim().toLocaleUpperCase('tr-TR') === rProj);
                 }
                 // 2. Default: Filter by user's own project
-                return r.project === currentUser.project;
+                return rProj === uProj;
             });
         }
     }
