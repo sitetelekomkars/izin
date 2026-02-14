@@ -597,8 +597,14 @@ window.loadUserListInternal = async function () {
     const container = document.getElementById('user-list-container');
     container.innerHTML = 'Yükleniyor...';
 
-    const res = await callApi({ action: 'getUserList' });
-    const users = res;
+    const { data: users, error } = await sb
+        .from('profiles')
+        .select('*');
+
+    if (error) {
+        container.innerHTML = 'Hata: ' + error.message;
+        return;
+    }
 
     if (!users || users.length === 0) {
         container.innerHTML = 'Kullanıcı bulunamadı';
@@ -612,7 +618,7 @@ window.loadUserListInternal = async function () {
             <thead style="background:#f8f9fa;">
                 <tr>
                     <th style="padding:10px;">AD SOYAD</th>
-                    <th style="padding:10px;">TC / KULLANICI</th>
+                    <th style="padding:10px;">E-POSTA / KULLANICI</th>
                     <th style="padding:10px;">Rol</th>
                     <th style="padding:10px;">Proje</th>
                     <th style="padding:10px;">2FA</th>
@@ -625,27 +631,20 @@ window.loadUserListInternal = async function () {
     users.forEach(u => {
         table += `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px;"><strong>${esc(u.fullName || '-')}</strong></td>
-                <td style="padding:10px; font-size:0.85rem; color:#666;">${esc(u.user)}</td>
-                <td style="padding:10px;">${esc(u.role)}</td>
+                <td style="padding:10px;">${esc(u.full_name)}</td>
+                <td style="padding:10px;">${esc(u.username)}</td>
+                <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span></td>
                 <td style="padding:10px;">${esc(u.project)}</td>
+                <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
                 <td style="padding:10px;">
-                    <span style="color: ${u.twoFactor === 'AKTİF' ? '#059669' : '#dc2626'}; font-weight:bold; font-size:0.75rem;">
-                        ${u.twoFactor === 'AKTİF' ? 'AÇIK' : 'KAPALI'}
-                    </span>
-                </td>
-                <td style="padding:10px;">
-                    <button onclick="resetPass('${esc(u.user)}')" title="Şifre Sıfırla" class="action-btn" style="background:#f59e0b; width:auto; padding:5px 10px;">🔑</button>
-                    ${isIk ? `
-                        <button onclick="editUserDetails('${esc(u.user)}', '${esc(u.role)}', '${esc(u.project)}')" title="Rol/Proje Düzenle" class="action-btn" style="background:#10b981; width:auto; padding:5px 10px; margin-left:5px;">✏️</button>
-                        <button onclick="toggle2faStatus('${esc(u.user)}', '${u.twoFactor === 'AKTİF' ? 'PASİF' : 'AKTİF'}')" title="2FA Değiştir" class="action-btn" style="background:#6366f1; width:auto; padding:5px 10px; margin-left:5px;">🛡️</button>
-                        <button onclick="delUser('${esc(u.user)}')" title="Kullanıcı Sil" class="action-btn reject" style="width:auto; padding:5px 10px; margin-left:5px;">🗑️</button>
-                    ` : ''}
+                    <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
+                    ${isIk ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
                 </td>
             </tr>
         `;
     });
-    table += '</tbody></table>';
+
+    table += `</tbody></table>`;
     container.innerHTML = table;
 }
 
@@ -656,52 +655,38 @@ window.submitAddUser = async function () {
 
     if (!u) { Swal.showValidationMessage('Kullanıcı adı gerekli'); return; }
 
-    Swal.showLoading();
-    const res = await callApi({
-        action: 'addUser',
-        newUser: u,
-        newRole: r,
-        newProject: p,
-        new2fa: document.getElementById('new-u-2fa')?.value || 'PASİF'
+    Swal.fire({
+        title: 'Kullanıcı Ekleme',
+        text: 'Lütfen kullanıcıları Supabase Dashboard > Authentication kısmından ekleyin. Biz burada sadece profillerini yönetiyoruz.',
+        icon: 'info'
     });
-
-    if (res.status === 'success') Swal.fire('Başarılı', 'Kullanıcı eklendi', 'success');
-    else Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
 }
 
-window.resetPass = async function (targetUser) {
-    const confirm = await Swal.fire({
-        title: 'Emin misiniz?',
-        text: `${targetUser} şifresi 1234 olacak.`,
-        icon: 'warning',
-        showCancelButton: true
-    });
-    if (!confirm.isConfirmed) return;
-    Swal.showLoading();
-    await callApi({ action: 'resetPass', targetUser });
-    Swal.fire('Başarılı', 'Sıfırlandı', 'success');
-}
-
-window.delUser = async function (targetUser) {
+window.delUser = async function (id) {
     const confirm = await Swal.fire({
         title: 'Silme İşlemi',
-        text: `${targetUser} siliniyor!`,
+        text: `Profil siliniyor! (Not: Auth kullanıcısını Dashboard'dan silmelisiniz)`,
         icon: 'error',
         showCancelButton: true
     });
     if (!confirm.isConfirmed) return;
+
     Swal.showLoading();
-    await callApi({ action: 'deleteUser', targetUser });
-    Swal.fire('Silindi', 'Kullanıcı silindi', 'success');
-    loadUserListInternal();
+    const { error } = await sb.from('profiles').delete().eq('id', id);
+
+    if (error) Swal.fire('Hata', error.message, 'error');
+    else {
+        Swal.fire('Silindi', 'Profil silindi', 'success');
+        loadUserListInternal();
+    }
 }
 
-window.editUserDetails = async function (targetUser, oldRole, oldProj) {
+window.editUserDetails = async function (id, oldRole, oldProj) {
     const { value: formValues } = await Swal.fire({
         title: 'Kullanıcı Düzenle',
         html:
-            `<label>Rol:</label><input id="edit-role" class="swal2-input" value="${oldRole}">` +
-            `<label>Proje:</label><input id="edit-proj" class="swal2-input" value="${oldProj}">`,
+            `<div style="text-align:left; margin-bottom:10px;">Rol:</div><input id="edit-role" class="swal2-input" value="${oldRole}">` +
+            `<div style="text-align:left; margin-bottom:10px; margin-top:20px;">Proje:</div><input id="edit-proj" class="swal2-input" value="${oldProj}">`,
         focusConfirm: false,
         showCancelButton: true,
         preConfirm: () => {
@@ -714,18 +699,16 @@ window.editUserDetails = async function (targetUser, oldRole, oldProj) {
 
     if (formValues) {
         Swal.showLoading();
-        const res = await callApi({
-            action: 'updateUserDetails',
-            targetUser: targetUser,
-            newRole: formValues.newRole,
-            newProject: formValues.newProject
-        });
+        const { error } = await sb
+            .from('profiles')
+            .update({ role: formValues.newRole, project: formValues.newProject })
+            .eq('id', id);
 
-        if (res.status === 'success') {
+        if (error) {
+            Swal.fire('Hata', error.message, 'error');
+        } else {
             Swal.fire('Başarılı', 'Kullanıcı güncellendi', 'success');
             loadUserListInternal();
-        } else {
-            Swal.fire('Hata', res.message || 'Yetkiniz olmayabilir', 'error');
         }
     }
 }
