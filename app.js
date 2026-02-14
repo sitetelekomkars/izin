@@ -7,7 +7,7 @@ const SUPABASE_KEY = 'sb_publishable_Kz5GU3lYBeawTncA78qvSA_X7pHQrHo';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbzBwT_kStscadwaqL9tFeC03Z2_h94J_hWk3bf7ktxXFMTW3xxFMwuOtRimSgx9PYh9Xw/exec';
+// let API_URL = ... (Removed, no longer needed)
 
 let currentUser = null;
 let sessionProfile = null; // Supabase Profile data
@@ -104,16 +104,10 @@ window.permissionResources = [
 
 // SAYFA YÜKLENDİĞİNDE
 window.addEventListener('DOMContentLoaded', async () => {
-    // 1. Önce verileri (İzin Türleri vb.) çek
-    try {
-        const lt = await callApi({ action: 'getLeaveTypes' });
-        window.leaveTypes = (lt && Array.isArray(lt)) ? lt : ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
-    } catch (e) {
-        window.leaveTypes = ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni'];
-    }
+    // 1. Static İzin Türleri (Supabase Dashboard'dan yönetilebilir ileride)
+    window.leaveTypes = ['Yıllık İzin', 'Mazeret İzni', 'Hastalık İzni', 'Mazeret (Ücretli)', 'Mazeret (Ücretsiz)', 'Düğün İzni', 'Ölüm İzni', 'Süt İzni'];
 
     // 2. Sonra oturumu kontrol et ve dashboard'u başlat
-    // SECURITY: Using sessionStorage instead of localStorage
     const savedUser = sessionStorage.getItem('site_telekom_user');
     if (savedUser) {
         try {
@@ -185,7 +179,6 @@ function initDashboardWithUser(user) {
         }
     }
 
-    loadLeaveTypes();
     // Load Permissions in background if not loaded
     loadRolePermissions();
 }
@@ -363,15 +356,16 @@ async function promptChangePassword(isForced = false) {
         }
     });
     if (p1) {
-        const res = await callApi({
-            action: 'changePassword',
-            newPass: p1
-        });
-        if (res.status === 'success') {
+        const { error } = await sb.auth.updateUser({ password: p1 });
+
+        if (!error) {
+            // Also update profile to clear force_password_change
+            await sb.from('profiles').update({ force_password_change: false }).eq('id', currentUser.id);
+
             Swal.fire('Başarılı', 'Şifreniz güncellendi', 'success');
             if (isForced) logout();
         } else {
-            Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+            Swal.fire('Hata', error.message || 'Hata oluştu', 'error');
         }
     }
 }
@@ -713,10 +707,11 @@ window.editUserDetails = async function (id, oldRole, oldProj) {
     }
 }
 
-window.toggle2faStatus = async function (targetUser, newStatus) {
+window.toggle2faStatus = async function (id, newStatus) {
+    const isEnabled = (newStatus === 'AKTİF');
     const confirm = await Swal.fire({
         title: 'Güvenlik Güncelleme',
-        text: `${targetUser} için 2FA ${newStatus === 'AKTİF' ? 'etkinleştirilecek' : 'devre dışı bırakılacak'}.`,
+        text: `2FA ${isEnabled ? 'etkinleştirilecek' : 'devre dışı bırakılacak'}.`,
         icon: 'info',
         showCancelButton: true,
         confirmButtonText: 'Evet, Değiştir',
@@ -725,12 +720,16 @@ window.toggle2faStatus = async function (targetUser, newStatus) {
     if (!confirm.isConfirmed) return;
 
     Swal.showLoading();
-    const res = await callApi({ action: 'toggle2fa', targetUser, newStatus });
-    if (res.status === 'success') {
-        Swal.fire('Başarılı', `2FA ${newStatus === 'AKTİF' ? 'Açıldı' : 'Kapatıldı'}`, 'success');
+    const { error } = await sb
+        .from('profiles')
+        .update({ two_factor_enabled: isEnabled })
+        .eq('id', id);
+
+    if (!error) {
+        Swal.fire('Başarılı', `2FA ${isEnabled ? 'Açıldı' : 'Kapatıldı'}`, 'success');
         loadUserListInternal();
     } else {
-        Swal.fire('Hata', res.message || 'İşlem başarısız', 'error');
+        Swal.fire('Hata', error.message || 'İşlem başarısız', 'error');
     }
 }
 
@@ -1110,65 +1109,7 @@ async function getClientInfo() {
     return ipFetchPromise;
 }
 
-async function callApi(body = {}, retries = 2) {
-    if (currentUser && currentUser.token && !body.token) body.token = currentUser.token;
-
-    // SECURITY: Check token expiration
-    if (currentUser && currentUser.tokenExpiry && Date.now() > currentUser.tokenExpiry) {
-        logout();
-        showError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-        return { status: 'error', message: 'Token expired' };
-    }
-
-    body.clientInfo = await getClientInfo();
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const options = {
-        method: 'POST',
-        redirect: "follow",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body),
-        signal: controller.signal
-    };
-
-    try {
-        const res = await fetch(API_URL, options);
-        clearTimeout(timeoutId);
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-
-        const json = await res.json();
-
-        if (json.status === 'error' && json.message && json.message.includes('token')) {
-            logout();
-            showError('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-        }
-
-        return json;
-    } catch (e) {
-        clearTimeout(timeoutId);
-
-        // Retry on network errors
-        if (retries > 0 && (e.name === 'AbortError' || e.message.includes('Failed to fetch'))) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return callApi(body, retries - 1);
-        }
-
-        let errorMsg = 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
-        if (e.name === 'AbortError') {
-            errorMsg = 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.';
-        } else if (e.message.includes('HTTP')) {
-            errorMsg = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
-        }
-
-        showError(errorMsg);
-        return { status: 'error', message: errorMsg };
-    }
-}
+// callApi function removed. All operations moved to Supabase.
 
 function showError(message) {
     Swal.fire({
@@ -1218,27 +1159,34 @@ window.openSystemLogs = async function () {
         return;
     }
     Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
-    const res = await callApi({ action: 'getLogs' });
-    if (res.status === 'error' || !Array.isArray(res)) { Swal.update({ html: 'Loglar alınamadı.' }); return; }
+
+    const { data, error } = await sb
+        .from('logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+    if (error) { Swal.update({ html: 'Hata: ' + error.message }); return; }
+    if (!data || data.length === 0) { Swal.update({ html: 'Henüz log kaydı yok.' }); return; }
 
     let tableHtml = `
         <div style="max-height:500px; overflow:auto; text-align:left;">
             <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
                 <thead style="background:#f8f9fa; position:sticky; top:0;">
-                    <tr><th>Tarih</th><th>Kullanıcı</th><th>Rol</th><th>Proje</th><th>İşlem</th><th>Detay</th><th>Domain/IP</th></tr>
+                    <tr><th>Tarih</th><th>Kullanıcı</th><th>Rol</th><th>Proje</th><th>İşlem</th><th>Detay</th><th>IP</th></tr>
                 </thead>
                 <tbody>
     `;
-    res.forEach(log => {
+    data.forEach(log => {
         tableHtml += `
             <tr style="border-bottom:1px solid #f0f0f0;">
-                <td style="padding:8px; white-space:nowrap;">${log.time}</td>
-                <td style="padding:8px;"><b>${esc(log.user)}</b></td>
+                <td style="padding:8px; white-space:nowrap;">${new Date(log.created_at).toLocaleString('tr-TR')}</td>
+                <td style="padding:8px;"><b>${esc(log.full_name || log.user_id)}</b></td>
                 <td style="padding:8px;">${esc(log.role)}</td>
                 <td style="padding:8px;">${esc(log.project)}</td>
-                <td style="padding:8px;">${esc(log.type)}</td>
+                <td style="padding:8px;">${esc(log.action)}</td>
                 <td style="padding:8px; color:#666;">${esc(log.detail)}</td>
-                <td style="padding:8px; font-family:monospace; color:#2563eb;">${esc(log.domain)}</td>
+                <td style="padding:8px; font-family:monospace; color:#2563eb;">${esc(log.ip_address)}</td>
             </tr>
         `;
     });
@@ -1318,11 +1266,27 @@ window.openReportModal = async function () {
 
     Swal.fire({ title: 'Rapor hazırlanıyor…', html: '⏳ Lütfen bekleyin', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const res = await callApi({ action: 'getRequests' });
-    if (!res || !Array.isArray(res)) {
-        Swal.fire('Hata', 'Kayıtlar alınamadı. (getRequests)', 'error');
+    const { data, error } = await sb
+        .from('requests')
+        .select('*');
+
+    if (error) {
+        Swal.fire('Hata', 'Kayıtlar alınamadı: ' + error.message, 'error');
         return;
     }
+
+    const res = data.map(r => ({
+        id: String(r.id),
+        requester: r.user_id,
+        fullName: r.full_name,
+        project: r.project,
+        type: r.leave_type,
+        start: r.start_date,
+        end: r.end_date,
+        reason: r.reason,
+        status: r.status,
+        documentStatus: r.document_status || 'Bekliyor'
+    }));
 
     const filtered = res.filter(r => {
         const d = new Date(r.start);
@@ -1390,21 +1354,30 @@ window.openReportModal = async function () {
     }
 }
 
-/* === RBAC FUNCTIONS === */
 async function loadRolePermissions() {
-    // Sadece Admin veya yetkili roller için çekilebilir
-    if (currentUser && currentUser.role === 'ADMIN') {
-        const res = await callApi({ action: 'getRolePermissions' });
-        if (res && res.status !== 'error') {
-            // New format: { permissions: {...}, allRoles: [...] }
-            if (res.permissions) {
-                window.rolePermissions = res.permissions;
-                window.dynamicRoles = res.allRoles || [];
-            } else {
-                window.rolePermissions = res;
-                window.dynamicRoles = [];
-            }
-        }
+    try {
+        const { data, error } = await sb
+            .from('role_permissions')
+            .select('*');
+
+        if (error) throw error;
+
+        const perms = {};
+        data.forEach(p => {
+            const r = p.role_name.toLowerCase();
+            const res = p.resource_key.toLowerCase();
+            if (!perms[r]) perms[r] = {};
+            perms[r][res] = p.is_granted;
+        });
+        window.rolePermissions = perms;
+
+        // Fetch dynamic roles from profiles
+        const { data: rolesData } = await sb.from('profiles').select('role');
+        const rolesSet = new Set();
+        (rolesData || []).forEach(r => { if (r.role) rolesSet.add(r.role); });
+        window.dynamicRoles = Array.from(rolesSet).sort();
+    } catch (err) {
+        console.error('RBAC Error:', err);
     }
 }
 
@@ -1488,9 +1461,9 @@ window.openPermissionModal = async function () {
             html += `
                 <td>
                     <label class="switch">
-                        <input type="checkbox" class="perm-check" 
-                            data-role="${esc(role)}" 
-                            data-res="${res.key}" 
+                        <input type="checkbox" class="perm-check"
+                            data-role="${esc(role)}"
+                            data-res="${res.key}"
                             ${isChecked ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
@@ -1514,31 +1487,35 @@ window.saveRolePermissions = async function () {
 
     checkboxes.forEach(cb => {
         updates.push({
-            role: cb.getAttribute('data-role'),
-            resource: cb.getAttribute('data-res'),
-            value: cb.checked
+            role_name: cb.getAttribute('data-role'),
+            resource_key: cb.getAttribute('data-res'),
+            is_granted: cb.checked
         });
     });
 
     const btn = document.querySelector('.btn-save-perm');
     if (btn) { btn.disabled = true; btn.innerText = 'Kaydediliyor...'; }
 
-    const res = await callApi({
-        action: 'updateRolePermissionsBatch',
-        updates: updates
-    });
+    try {
+        // Supabase upsert works well for this flat structure
+        const { error } = await sb
+            .from('role_permissions')
+            .upsert(updates, { onConflict: 'role_name,resource_key' });
 
-    if (res.status === 'success') {
+        if (error) throw error;
+
         Swal.fire('Başarılı', 'Tüm yetkiler kaydedildi.', 'success');
+
         // Refresh local cache
         updates.forEach(u => {
-            const rKey = u.role.toLowerCase();
-            const resKey = u.resource.toLowerCase();
+            const rKey = u.role_name.toLowerCase();
+            const resKey = u.resource_key.toLowerCase();
             if (!window.rolePermissions[rKey]) window.rolePermissions[rKey] = {};
-            window.rolePermissions[rKey][resKey] = u.value;
+            window.rolePermissions[rKey][resKey] = u.is_granted;
         });
-    } else {
-        Swal.fire('Hata', 'Kaydedilirken sorun oluştu.', 'error');
+    } catch (err) {
+        Swal.fire('Hata', err.message || 'Kaydedilirken sorun oluştu.', 'error');
+    } finally {
         if (btn) { btn.disabled = false; btn.innerText = '💾 Değişiklikleri Kaydet'; }
     }
 }
