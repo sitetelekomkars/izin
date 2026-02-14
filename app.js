@@ -652,8 +652,12 @@ window.openUserMgmtModal = function () {
         showConfirmButton: false,
         showCloseButton: true,
         didOpen: () => {
+            // Liste sekmesine tıklanınca yükle
             const listBtn = document.querySelector('[data-mgmt-tab="list"]');
-            if (listBtn) listBtn.addEventListener('click', loadUserListInternal);
+            // Eğer Liste sekmesi direkt açıksa (IK değilse default liste açılır) hemen yükle
+            if (listBtn && listBtn.classList.contains('active')) {
+                loadUserListInternal();
+            }
         }
     });
 }
