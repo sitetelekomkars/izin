@@ -242,7 +242,7 @@ async function handleLogin(e) {
 
     try {
         // 1. Supabase Auth ile Giriş
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await sb.auth.signInWithPassword({
             email: userEmail,
             password: passVal
         });
@@ -250,7 +250,7 @@ async function handleLogin(e) {
         if (error) throw error;
 
         // 2. Profil Verilerini Çek
-        const { data: profile, error: pError } = await supabase
+        const { data: profile, error: pError } = await sb
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
@@ -295,6 +295,7 @@ async function handleLogin(e) {
 function logout() {
     currentUser = null;
     sessionStorage.removeItem('site_telekom_user');
+    sb.auth.signOut();
 
     // Login formunu temizle ve butonu aktif et
     const loginForm = document.querySelector('#view-login form');
