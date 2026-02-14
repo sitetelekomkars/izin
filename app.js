@@ -138,45 +138,41 @@ function initDashboardWithUser(user) {
     const mgmtLink = document.getElementById('menu-mgmt');
     const logsLink = document.getElementById('menu-logs');
     const reportLink = document.getElementById('menu-report');
+    const rbacLink = document.getElementById('menu-rbac');
     const passLink = document.getElementById('menu-pass');
 
+    // 1. Şifre değiştirme her zaman açık
     if (passLink) passLink.style.display = 'block';
-    if (mgmtLink) mgmtLink.style.display = (isIk || isSup || isDanisma || isAdmin) ? 'block' : 'none';
-    if (logsLink) logsLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
-    if (reportLink) reportLink.style.display = (isIk || isAdmin) ? 'block' : 'none';
+
+    // 2. Yetki Yönetimi (RBAC): SADECE ADMIN
+    if (rbacLink) {
+        rbacLink.style.display = (uRole === 'admin') ? 'block' : 'none';
+    }
+
+    // 3. Diğer Menüler: Rol Kontrolü + Yetki Matrisi Kontrolü
+    const isSpecialist = isAdmin || isIk || isSup || isDanisma;
+
+    if (mgmtLink) {
+        mgmtLink.style.display = (isSpecialist && checkPermission('manage_users')) ? 'block' : 'none';
+    }
+    if (logsLink) {
+        logsLink.style.display = ((isAdmin || isIk) && checkPermission('view_logs')) ? 'block' : 'none';
+    }
+    if (reportLink) {
+        reportLink.style.display = ((isAdmin || isIk) && checkPermission('export_excel')) ? 'block' : 'none';
+    }
 
     switchView('dashboard');
     renderDashboard(user.role);
 
-    // RBAC: Update menu visibility based on permissions
-    const role = (user.role || '').toUpperCase();
-
-    // Admin Panel Linki
-    // Admin Panel Linki (Artık Tab kontrolü ile yönetiliyor, yedek olarak logoya vs bağlıysa kalsın ama şimdilik tab yetkisine bağlayalım)
+    // Admin Panel Logo/Linki (Yedek kontrol)
     const btnAdmin = document.getElementById('btn-admin-panel');
     if (btnAdmin) {
-        if (role === 'ADMIN' || checkPermission('tab_requests')) {
+        if (isAdmin || checkPermission('tab_requests')) {
             btnAdmin.classList.remove('hidden');
         } else {
             btnAdmin.classList.add('hidden');
         }
-    }
-
-    // Dropdown Menu Items
-    if (role === 'ADMIN' || (['İK', 'IK'].includes(uRole))) {
-        if (checkPermission('view_logs')) document.getElementById('menu-logs').style.display = 'block';
-        if (checkPermission('manage_users')) document.getElementById('menu-mgmt').style.display = 'block';
-    }
-
-    if (role === 'ADMIN' || uRole.includes('ik')) {
-        if (checkPermission('export_excel')) document.getElementById('menu-report').style.display = 'block';
-    }
-
-    // RBAC Button (Admin Only)
-    // Fix: Using uRole (normalized) to be sure
-    if (uRole === 'admin') {
-        const btnRbac = document.getElementById('menu-rbac');
-        if (btnRbac) btnRbac.style.display = 'block';
     }
 
     loadLeaveTypes();
