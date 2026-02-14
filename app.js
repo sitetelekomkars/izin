@@ -6,7 +6,7 @@ const SUPABASE_KEY = 'sb_publishable_Kz5GU3lYBeawTncA78qvSA_X7pHQrHo';
 
 // Password Reset API (Google Apps Script Backend)
 // KURULUM: admin_tools/PASSWORD_RESET_SETUP.md dosyasına bakın
-const PASSWORD_RESET_API_URL = 'https://script.google.com/macros/s/AKfycbwM66KExhPuYxrCqb5fPtDvzggz-aDgy7mpu_j-V8DJw636KCov-v8vI6Bc8TleNjCVeA/exec'; // Deploy sonrası güncellenecek
+const PASSWORD_RESET_API_URL = 'https://script.google.com/macros/s/AKfycbwM66KExhPuYxrCqb5fPtDvzggz-aDgy7mpu_j-V8DJw636KCov-v8vI6Bc8TleNjCVeA/exec';
 
 // Initialize Supabase client
 const { createClient } = supabase;
