@@ -94,19 +94,19 @@ const itemsPerPage = 10;
 /* === RBAC GLOBALS === */
 window.rolePermissions = {}; // { 'role': { 'resource': true/false } }
 window.permissionResources = [
-    { key: 'export_excel', label: 'Excel Rapor' },
-    { key: 'view_logs', label: 'Sistem Logları' },
-    { key: 'manage_users', label: 'Menü: Personel Yön.' },
-    { key: 'tab_requests', label: 'Sekme: Talepler (Onay)' },
+    { key: 'export_excel', label: 'Excel' },
+    { key: 'view_logs', label: 'Loglar' },
+    { key: 'manage_users', label: 'Personel Yön.' },
+    { key: 'tab_requests', label: 'Sekme: Talepler' },
     { key: 'tab_new_request', label: 'Sekme: İzin İste' },
     { key: 'tab_history', label: 'Sekme: Geçmişim' },
-    { key: 'user_add', label: 'Personel: Ekle' },
-    { key: 'user_delete', label: 'Personel: Sil' },
-    { key: 'user_list', label: 'Personel: Liste' },
-    { key: 'view_all_projects', label: 'Erişim: Tüm Projeleri Gör' },
-    { key: 'auth_tl', label: 'Yetki: TL Katmanı (Onay)' },
-    { key: 'auth_spv', label: 'Yetki: SPV Katmanı (Onay)' },
-    { key: 'auth_ik', label: 'Yetki: İK Katmanı (Onay)' }
+    { key: 'user_add', label: 'Pers. Ekle' },
+    { key: 'user_delete', label: 'Pers. Sil' },
+    { key: 'user_list', label: 'Pers. Liste' },
+    { key: 'view_all_projects', label: 'Tüm Projeler' },
+    { key: 'auth_tl', label: 'TL Onayı' },
+    { key: 'auth_spv', label: 'SPV Onayı' },
+    { key: 'auth_ik', label: 'İK Onayı' }
 ];
 
 // SAYFA YÜKLENDİĞİNDE
@@ -1596,7 +1596,7 @@ function checkPermission(resource) {
 }
 
 window.openPermissionModal = async function () {
-    Swal.fire({ title: 'Yetki Matrisi', html: '⏳ Yükleniyor...', width: 950, showConfirmButton: false, showCloseButton: true });
+    Swal.fire({ title: 'Yetki Matrisi', html: '⏳ Yükleniyor...', width: '90%', showConfirmButton: false, showCloseButton: true });
 
     await loadRolePermissions(); // Refresh
     const permissions = window.rolePermissions || {};
