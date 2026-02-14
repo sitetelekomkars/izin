@@ -670,56 +670,67 @@ window.loadUserListInternal = async function () {
     const container = document.getElementById('user-list-container');
     container.innerHTML = 'Yükleniyor...';
 
-    const { data: users, error } = await sb
-        .from('profiles')
-        .select('*');
+    try {
+        const { data: users, error } = await sb
+            .from('profiles')
+            .select('*');
 
-    if (error) {
-        container.innerHTML = 'Hata: ' + error.message;
-        return;
-    }
+        if (error) {
+            container.innerHTML = 'Hata: ' + error.message;
+            console.error('Supabase error:', error);
+            return;
+        }
 
-    if (!users || users.length === 0) {
-        container.innerHTML = 'Kullanıcı bulunamadı';
-        return;
-    }
+        if (!users || users.length === 0) {
+            container.innerHTML = 'Kullanıcı bulunamadı';
+            return;
+        }
 
-    const isIk = ['İK', 'IK'].includes(currentUser.role);
+        const isIk = ['İK', 'IK'].includes(currentUser.role);
 
-    let table = `
-        <table style="width:100%; border-collapse: collapse;">
-            <thead style="background:#f8f9fa;">
-                <tr>
-                    <th style="padding:10px;">AD SOYAD</th>
-                    <th style="padding:10px;">E-POSTA / KULLANICI</th>
-                    <th style="padding:10px;">Rol</th>
-                    <th style="padding:10px;">Proje</th>
-                    <th style="padding:10px;">2FA</th>
-                    <th style="padding:10px;">İşlem</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    users.forEach(u => {
-        table += `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px;">${esc(u.full_name)}</td>
-                <td style="padding:10px;">${esc(u.username)}</td>
-                <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span></td>
-                <td style="padding:10px;">${esc(u.project)}</td>
-                <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
-                <td style="padding:10px;">
-                    <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
-                    <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
-                    ${isIk ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
-                </td>
-            </tr>
+        let table = `
+            <table style="width:100%; border-collapse: collapse;">
+                <thead style="background:#f8f9fa;">
+                    <tr>
+                        <th style="padding:10px;">AD SOYAD</th>
+                        <th style="padding:10px;">E-POSTA / KULLANICI</th>
+                        <th style="padding:10px;">Rol</th>
+                        <th style="padding:10px;">Proje</th>
+                        <th style="padding:10px;">2FA</th>
+                        <th style="padding:10px;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
-    });
 
-    table += `</tbody></table>`;
-    container.innerHTML = table;
+        users.forEach(u => {
+            table += `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px;">${esc(u.full_name)}</td>
+                    <td style="padding:10px;">${esc(u.username)}</td>
+                    <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span></td>
+                    <td style="padding:10px;">${esc(u.project)}</td>
+                    <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
+                    <td style="padding:10px;">
+                        <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
+                        <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
+                        ${isIk ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+
+        table += `</tbody></table>`;
+        container.innerHTML = table;
+    } catch (err) {
+        console.error('loadUserListInternal error:', err);
+        container.innerHTML = `
+            <div style="padding:20px; color:#dc2626;">
+                <strong>Hata:</strong> ${err.message}<br><br>
+                <small>Console'u kontrol edin (F12)</small>
+            </div>
+        `;
+    }
 }
 
 window.submitAddUser = async function () {
