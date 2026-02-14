@@ -664,6 +664,11 @@ window.switchMgmtTab = function (tab, e) {
     const targetBtn = (e && e.target) ? e.target : document.querySelector(`[data-mgmt-tab="${tab}"]`);
     if (targetBtn) targetBtn.classList.add('active');
     document.getElementById('mgmt-tab-' + tab).classList.remove('hidden');
+
+    // Kullanıcı listesi sekmesine geçildiğinde otomatik yükle
+    if (tab === 'list') {
+        loadUserListInternal();
+    }
 }
 
 window.loadUserListInternal = async function () {
