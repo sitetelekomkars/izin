@@ -420,7 +420,7 @@ function switchView(viewName) {
 async function promptChangePassword(isForced = false) {
     const { value: p1 } = await Swal.fire({
         title: isForced ? '⚠️ Şifrenizi Güncelleyin' : 'Şifre Değiştir',
-        text: isForced ? 'Güvenliğiniz için varsayılan şifreyi (1234) değiştirmeniz gerekmektedir.' : '',
+        text: isForced ? 'Güvenliğiniz için varsayılan şifreyi (123456) değiştirmeniz gerekmektedir.' : '',
         input: 'password',
         placeholder: 'Yeni Şifreniz',
         showCancelButton: !isForced,
