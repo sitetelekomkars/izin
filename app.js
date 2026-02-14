@@ -605,10 +605,6 @@ window.openUserMgmtModal = function () {
                 <label>Kullanıcı Adı (TC Son 6)</label>
                 <input type="text" id="new-u-name" class="swal2-input" placeholder="Örn: 123456">
             </div>
-            <div class="form-group">
-                <label>E-Posta (2FA İçin)</label>
-                <input type="email" id="new-u-email" class="swal2-input" placeholder="ornek@mail.com">
-            </div>
             ${canEditRoles ? `
                 <div class="form-group">
                     <label>Rol</label>
@@ -744,7 +740,6 @@ window.loadUserListInternal = async function () {
 
 window.submitAddUser = async function () {
     const u = document.getElementById('new-u-name').value.trim();
-    const emailInput = document.getElementById('new-u-email').value.trim();
     const r = document.getElementById('new-u-role')?.value || 'TL';
     const p = document.getElementById('new-u-proj')?.value.trim() || '';
     const fn = document.getElementById('new-u-fullname')?.value.trim() || '';
@@ -754,8 +749,8 @@ window.submitAddUser = async function () {
     if (!fn) { Swal.showValidationMessage('Ad Soyad gerekli'); return; }
     if (!p) { Swal.showValidationMessage('Proje gerekli'); return; }
 
-    // Email mantığı: Girilmediyse username@example.com
-    const finalEmail = emailInput || `${u}@example.com`;
+    // Email mantığı: Kullanıcı adının sonuna @example.com ekle
+    const finalEmail = `${u}@example.com`;
 
     Swal.fire({
         title: 'Kullanıcı Oluşturuluyor...',
