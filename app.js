@@ -103,6 +103,7 @@ window.permissionResources = [
     { key: 'user_add', label: 'Personel: Ekle' },
     { key: 'user_delete', label: 'Personel: Sil' },
     { key: 'user_list', label: 'Personel: Liste' },
+    { key: 'view_all_projects', label: 'Erişim: Tüm Projeleri Gör' },
     { key: 'auth_tl', label: 'Yetki: TL Katmanı (Onay)' },
     { key: 'auth_spv', label: 'Yetki: SPV Katmanı (Onay)' },
     { key: 'auth_ik', label: 'Yetki: İK Katmanı (Onay)' }
@@ -275,6 +276,7 @@ async function handleLogin(e) {
             fullName: profile.full_name,
             role: profile.role,
             project: profile.project,
+            managed_scopes: profile.managed_scopes || [], // New: Managed Scopes
             token: data.session.access_token,
             // Supabase handle token expiry automatically, but we store it for UI compatibility
             tokenExpiry: Date.now() + (data.session.expires_in * 1000)
@@ -700,11 +702,11 @@ window.loadUserListInternal = async function () {
                 <tr style="border-bottom:1px solid #eee;">
                     <td style="padding:10px;">${esc(u.full_name)}</td>
                     <td style="padding:10px;">${esc(u.username)}</td>
-                    <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span></td>
+                    <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span><br><small style="color:#666;">${u.managed_scopes ? u.managed_scopes.join(', ') : ''}</small></td>
                     <td style="padding:10px;">${esc(u.project)}</td>
                     <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
                     <td style="padding:10px;">
-                        <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
+                        <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}', '${esc((u.managed_scopes || []).join(', '))}')">Düzenle</button>
                         <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
                         ${checkPermission('user_delete') ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
                     </td>
@@ -758,18 +760,22 @@ window.delUser = async function (id) {
     }
 }
 
-window.editUserDetails = async function (id, oldRole, oldProj) {
+window.editUserDetails = async function (id, oldRole, oldProj, oldScopes) {
     const { value: formValues } = await Swal.fire({
         title: 'Kullanıcı Düzenle',
         html:
             `<div style="text-align:left; margin-bottom:10px;">Rol:</div><input id="edit-role" class="swal2-input" value="${oldRole}">` +
-            `<div style="text-align:left; margin-bottom:10px; margin-top:20px;">Proje:</div><input id="edit-proj" class="swal2-input" value="${oldProj}">`,
+            `<div style="text-align:left; margin-bottom:10px; margin-top:20px;">Proje (Ana):</div><input id="edit-proj" class="swal2-input" value="${oldProj}">` +
+            `<div style="text-align:left; margin-bottom:10px; margin-top:20px;">Yönetilen Projeler (Virgülle Ayırın):</div><input id="edit-scopes" class="swal2-input" value="${oldScopes || ''}" placeholder="Örn: Proje A, Proje B">`,
         focusConfirm: false,
         showCancelButton: true,
         preConfirm: () => {
+            const rawScopes = document.getElementById('edit-scopes').value;
+            const scopes = rawScopes ? rawScopes.split(',').map(s => s.trim()).filter(Boolean) : null;
             return {
                 newRole: document.getElementById('edit-role').value,
-                newProject: document.getElementById('edit-proj').value
+                newProject: document.getElementById('edit-proj').value,
+                newScopes: scopes
             }
         }
     });
@@ -778,7 +784,11 @@ window.editUserDetails = async function (id, oldRole, oldProj) {
         Swal.showLoading();
         const { error } = await sb
             .from('profiles')
-            .update({ role: formValues.newRole, project: formValues.newProject })
+            .update({
+                role: formValues.newRole,
+                project: formValues.newProject,
+                managed_scopes: formValues.newScopes
+            })
             .eq('id', id);
 
         if (error) {
@@ -883,7 +893,7 @@ async function loadAdminRequests() {
     }
 
     // Map Supabase columns to existing app format
-    allAdminRequests = data.map(r => ({
+    let mappedRequests = data.map(r => ({
         id: String(r.id),
         requester: r.user_id, // uuid
         fullName: r.full_name,
@@ -898,6 +908,27 @@ async function loadAdminRequests() {
         ik: r.ik_decision,
         documentStatus: r.document_status || 'Bekliyor'
     }));
+
+    // SCOPE FILTERING
+    if (currentUser) {
+        const role = (currentUser.role || '').toUpperCase();
+        // Check if Admin/IK (Can see all)
+        const isFullAccess = ['İK', 'IK', 'ADMIN'].includes(role) || checkPermission('view_all_projects');
+
+        if (!isFullAccess) {
+            const scopes = currentUser.managed_scopes || [];
+            mappedRequests = mappedRequests.filter(r => {
+                // 1. If user has specific managed scopes, check if project is in list
+                if (scopes.length > 0) {
+                    return scopes.includes(r.project);
+                }
+                // 2. Default: Filter by user's own project
+                return r.project === currentUser.project;
+            });
+        }
+    }
+
+    allAdminRequests = mappedRequests;
 
     if (allAdminRequests && Array.isArray(allAdminRequests)) {
         allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
@@ -1081,19 +1112,48 @@ window.processRequest = async function (id, decision) {
     try {
         const statusVal = decision === 'Reddedildi' ? `Reddedildi: ${reason}` : decision;
 
-        // Dynamic Role Check (Decoupled Logic from Implementation Plan)
-        // We replicate the backend logic for which column to update
+        // 1. İlgili kayıtı bul (State-Based Logic)
+        const request = allAdminRequests.find(r => r.id === id);
+        if (!request) throw new Error('Talep bulunamadı');
+
+        const currentStatus = request.status;
         const uRole = (currentUser.role || '').toUpperCase();
-        const perms = window.rolePermissions[uRole] || {};
         const isAdmin = uRole === 'ADMIN';
 
         let updateData = {};
-        if (isAdmin || perms['auth_ik'] || uRole.includes('IK')) {
-            updateData = { status: decision === 'Onaylandı' ? 'onaylandi' : 'red', ik_decision: statusVal };
-        } else if (perms['auth_spv'] || uRole === 'SPV') {
-            updateData = { status: decision === 'Onaylandı' ? 'ik_bekliyor' : 'red', spv_decision: statusVal };
-        } else if (perms['auth_tl'] || uRole === 'TL') {
-            updateData = { status: decision === 'Onaylandı' ? 'spv_bekliyor' : 'red', tl_decision: statusVal };
+
+        // 2. Duruma Göre İşlem Yap (Rol Check ile Birlikte)
+        // TL Onayı (Bekleyen: tl_bekliyor)
+        if (currentStatus === 'tl_bekliyor') {
+            if (!isAdmin && !checkPermission('auth_tl')) throw new Error('TL onayı yetkiniz yok');
+
+            if (decision === 'Onaylandı') {
+                updateData = { status: 'spv_bekliyor', tl_decision: statusVal };
+            } else {
+                updateData = { status: 'red', tl_decision: statusVal };
+            }
+        }
+        // SPV Onayı (Bekleyen: spv_bekliyor)
+        else if (currentStatus === 'spv_bekliyor') {
+            if (!isAdmin && !checkPermission('auth_spv')) throw new Error('SPV onayı yetkiniz yok');
+
+            if (decision === 'Onaylandı') {
+                updateData = { status: 'ik_bekliyor', spv_decision: statusVal };
+            } else {
+                updateData = { status: 'red', spv_decision: statusVal };
+            }
+        }
+        // İK Onayı (Bekleyen: ik_bekliyor)
+        else if (currentStatus === 'ik_bekliyor') {
+            if (!isAdmin && !checkPermission('auth_ik') && !['İK', 'IK'].includes(uRole)) throw new Error('İK onayı yetkiniz yok');
+
+            if (decision === 'Onaylandı') {
+                updateData = { status: 'onaylandi', ik_decision: statusVal };
+            } else {
+                updateData = { status: 'red', ik_decision: statusVal };
+            }
+        } else {
+            throw new Error('Bu talep için işlem yapılamaz durumdasınız: ' + currentStatus);
         }
 
         const { error } = await sb
