@@ -82,15 +82,14 @@ const itemsPerPage = 10;
 /* === RBAC GLOBALS === */
 window.rolePermissions = {}; // { 'role': { 'resource': true/false } }
 window.permissionResources = [
-    { key: 'admin_panel', label: 'Admin Paneli' },
     { key: 'export_excel', label: 'Excel Rapor' },
     { key: 'view_logs', label: 'Sistem Logları' },
-    { key: 'tab_requests', label: 'Tab: Talep Yönetimi' },
-    { key: 'tab_new_request', label: 'Tab: İzin Talebi' },
-    { key: 'tab_history', label: 'Tab: Geçmişim' },
-    { key: 'user_add', label: 'Personel: Ekleme' },
-    { key: 'user_list', label: 'Personel: Listeleme' },
-    { key: 'manage_users', label: 'Personel Yönetimi (Menü)' }
+    { key: 'manage_users', label: 'Menü: Personel Yön.' },
+    { key: 'tab_requests', label: 'Sekme: Talepler (Onay)' },
+    { key: 'tab_new_request', label: 'Sekme: İzin İste' },
+    { key: 'tab_history', label: 'Sekme: Geçmişim' },
+    { key: 'user_add', label: 'Personel: Ekle' },
+    { key: 'user_list', label: 'Personel: Liste' }
 ];
 
 // SAYFA YÜKLENDİĞİNDE
@@ -153,10 +152,10 @@ function initDashboardWithUser(user) {
     const role = (user.role || '').toUpperCase();
 
     // Admin Panel Linki
+    // Admin Panel Linki (Artık Tab kontrolü ile yönetiliyor, yedek olarak logoya vs bağlıysa kalsın ama şimdilik tab yetkisine bağlayalım)
     const btnAdmin = document.getElementById('btn-admin-panel');
     if (btnAdmin) {
-        // Admin or Has Permission
-        if (role === 'ADMIN' || checkPermission('admin_panel')) {
+        if (role === 'ADMIN' || checkPermission('tab_requests')) {
             btnAdmin.classList.remove('hidden');
         } else {
             btnAdmin.classList.add('hidden');
@@ -1426,12 +1425,25 @@ window.openPermissionModal = async function () {
     const backendRoles = window.dynamicRoles || [];
     const sheetRoles = Object.keys(permissions);
 
-    // Merge and unique
-    // Merge and unique
-    let allRoles = [...new Set([...backendRoles, ...sheetRoles])]
-        .map(r => r.trim())
-        .filter(r => r && r.toLowerCase() !== 'role' && r.toLowerCase() !== 'undefined' && r.toLowerCase() !== 'null' && r.length > 1)
-        .sort();
+    // Merge and unique (Case Insensitive Deduplication)
+    const rawRoles = [...backendRoles, ...sheetRoles];
+    const uniqueMap = new Map();
+
+    rawRoles.forEach(r => {
+        if (!r) return;
+        const clean = String(r).trim();
+        if (clean.length < 2) return;
+        const lower = clean.toLowerCase();
+        if (['role', 'undefined', 'null', 'rol'].includes(lower)) return;
+
+        // Keep the first variation we find (or prefer backend's casing)
+        // Since backendRoles comes first in spread, we keep backend casing usually.
+        if (!uniqueMap.has(lower)) {
+            uniqueMap.set(lower, clean);
+        }
+    });
+
+    let allRoles = Array.from(uniqueMap.values()).sort();
 
     // If empty (first run or error), add minimal defaults
     if (allRoles.length === 0) allRoles = ['Admin'];
