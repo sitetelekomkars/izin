@@ -3,6 +3,11 @@
 */
 const SUPABASE_URL = 'https://cmewgawdwacdrijbvmex.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Kz5GU3lYBeawTncA78qvSA_X7pHQrHo';
+
+// Password Reset API (Google Apps Script Backend)
+// KURULUM: admin_tools/PASSWORD_RESET_SETUP.md dosyasına bakın
+const PASSWORD_RESET_API_URL = 'https://script.google.com/macros/s/AKfycbwM66KExhPuYxrCqb5fPtDvzggz-aDgy7mpu_j-V8DJw636KCov-v8vI6Bc8TleNjCVeA/exec'; // Deploy sonrası güncellenecek
+
 // Initialize Supabase client
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -706,6 +711,7 @@ window.loadUserListInternal = async function () {
                 <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
                 <td style="padding:10px;">
                     <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
+                    <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
                     ${isIk ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
                 </td>
             </tr>
@@ -778,6 +784,59 @@ window.editUserDetails = async function (id, oldRole, oldProj) {
             Swal.fire('Başarılı', 'Kullanıcı güncellendi', 'success');
             loadUserListInternal();
         }
+    }
+}
+
+window.resetUserPassword = async function (userId, username) {
+    // API URL kontrolü
+    if (!PASSWORD_RESET_API_URL || PASSWORD_RESET_API_URL.includes('BURAYA')) {
+        await Swal.fire({
+            title: 'Kurulum Gerekli',
+            html: `Şifre sıfırlama özelliği henüz kurulmamış.<br><br>
+                   <strong>Kurulum için:</strong><br>
+                   1. <code>admin_tools/PASSWORD_RESET_SETUP.md</code> dosyasını aç<br>
+                   2. Adımları takip et<br>
+                   3. Google Apps Script URL'ini <code>app.js</code> dosyasına ekle`,
+            icon: 'info'
+        });
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: 'Şifre Sıfırlama',
+        html: `<strong>${username}</strong> kullanıcısının şifresi <strong>1234</strong> olarak sıfırlanacak.<br><br>
+               Kullanıcı ilk girişte yeni şifre belirlemeye zorlanacak.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Evet, Sıfırla',
+        cancelButtonText: 'İptal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        // Google Apps Script API'yi çağır
+        const response = await fetch(PASSWORD_RESET_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'reset_password',
+                userId: userId
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire('Başarılı', `${username} kullanıcısının şifresi 1234 olarak sıfırlandı.`, 'success');
+            loadUserListInternal();
+        } else {
+            throw new Error(data.error || 'Bilinmeyen hata');
+        }
+    } catch (err) {
+        Swal.fire('Hata', 'Şifre sıfırlanamadı: ' + err.message, 'error');
     }
 }
 
