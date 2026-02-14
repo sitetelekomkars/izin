@@ -101,6 +101,7 @@ window.permissionResources = [
     { key: 'tab_new_request', label: 'Sekme: İzin İste' },
     { key: 'tab_history', label: 'Sekme: Geçmişim' },
     { key: 'user_add', label: 'Personel: Ekle' },
+    { key: 'user_delete', label: 'Personel: Sil' },
     { key: 'user_list', label: 'Personel: Liste' },
     { key: 'auth_tl', label: 'Yetki: TL Katmanı (Onay)' },
     { key: 'auth_spv', label: 'Yetki: SPV Katmanı (Onay)' },
@@ -571,15 +572,17 @@ function renderDashboard(role) {
 /* === USER MANAGEMENT === */
 window.openUserMgmtModal = function () {
     const role = (currentUser.role || '').toUpperCase();
-    const isIk = ['İK', 'IK', 'ADMIN'].includes(role); // ADMIN de ekleme yapabilir
-    const isSup = ['SPV', 'TL'].includes(role);
+
+    // Yetkileri kontrol et
+    const canAdd = checkPermission('user_add');
+    const canList = checkPermission('user_list');
 
     let html = `
         <div class="mgmt-tabs">
-            ${isIk && checkPermission('user_add') ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
-            ${checkPermission('user_list') ? `<button class="mgmt-tab-btn ${!isIk ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>` : ''}
+            ${canAdd ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
+            ${canList ? `<button class="mgmt-tab-btn ${!canAdd ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>` : ''}
         </div>
-        ${isIk ? `
+        ${canAdd ? `
         <div id="mgmt-tab-add" class="mgmt-tab-content">
             <div class="form-group">
                 <label>Kullanıcı Adı (TC Son 6)</label>
@@ -616,10 +619,10 @@ window.openUserMgmtModal = function () {
             ` : `
                 <div class="alert-info">ℹ️ Sadece kendi grubunuza TL ekleyebilirsiniz.</div>
             `}
-            <button class="btn-primary" onclick="submitAddUser()" style="margin-top:20px;">Ekle (İlk Şifre: 1234)</button>
+            <button class="btn-primary" onclick="submitAddUser()" style="margin-top:20px;">Ekle (İlk Şifre: 123456)</button>
         </div>
         ` : ''}
-        <div id="mgmt-tab-list" class="mgmt-tab-content ${!isIk ? '' : 'hidden'}">
+        <div id="mgmt-tab-list" class="mgmt-tab-content ${!canAdd ? '' : 'hidden'}">
             <div id="user-list-container">Yükleniyor...</div>
         </div>
     `;
@@ -703,7 +706,7 @@ window.loadUserListInternal = async function () {
                     <td style="padding:10px;">
                         <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}')">Düzenle</button>
                         <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
-                        ${isIk ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
+                        ${checkPermission('user_delete') ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
                     </td>
                 </tr>
             `;
@@ -1335,13 +1338,12 @@ window.openReportModal = async function () {
         Swal.fire('Yetki Yok', 'Bu işlemi yapmaya yetkiniz bulunmamaktadır.', 'warning');
         return;
     }
-    // Menü zaten İK için açılıyor ama yine de güvenli kontrol
-    const uRole = (currentUser.role || '').toUpperCase();
-    const isIk = ['İK', 'IK', 'ADMIN'].includes(uRole);
-    if (!isIk && uRole !== 'ADMIN') {
-        Swal.fire('Yetki Yok', 'Excel raporu sadece İK ve Yönetici rolü tarafından alınabilir.', 'warning');
+    if (!checkPermission('export_excel')) {
+        Swal.fire('Yetki Yok', 'Bu işlemi yapmaya yetkiniz bulunmamaktadır.', 'warning');
         return;
     }
+
+    // isIk kontrolü kaldırıldı, sadece checkPermission yeterli.
 
     if (typeof XLSX === 'undefined') {
         Swal.fire('Eksik Kütüphane', 'Excel kütüphanesi yüklenemedi (XLSX). CDN engelleniyor olabilir.', 'error');
