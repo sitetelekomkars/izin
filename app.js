@@ -103,6 +103,7 @@ window.permissionResources = [
     { key: 'user_add', label: 'Pers. Ekle' },
     { key: 'user_delete', label: 'Pers. Sil' },
     { key: 'user_list', label: 'Pers. Liste' },
+    { key: 'user_edit_role', label: 'Pers. Rol/Proje Değiştir' },
     { key: 'view_all_projects', label: 'Tüm Projeler' },
     { key: 'auth_tl', label: 'TL Onayı' },
     { key: 'auth_spv', label: 'SPV Onayı' },
@@ -119,15 +120,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
-            initDashboardWithUser(currentUser);
+            await initDashboardWithUser(currentUser);
         } catch (e) {
             sessionStorage.removeItem('site_telekom_user');
         }
     }
 });
 
-function initDashboardWithUser(user) {
+async function initDashboardWithUser(user) {
     if (!user) return;
+
+    // 0. ÖNCE YETKİLERİ YÜKLE
+    await loadRolePermissions();
 
     // UI Elemanlarını Güncelle
     const dUser = document.getElementById('displayUsername');
@@ -142,9 +146,6 @@ function initDashboardWithUser(user) {
     // Menü Görünürlük Ayarları
     const uRole = normalizeText(user.role);
     const isAdmin = uRole === 'admin';
-    const isIk = uRole.includes('ik');
-    const isSup = uRole === 'spv' || uRole === 'tl';
-    const isDanisma = uRole.includes('danı') || uRole.includes('danis');
 
     const mgmtLink = document.getElementById('menu-mgmt');
     const logsLink = document.getElementById('menu-logs');
@@ -161,16 +162,18 @@ function initDashboardWithUser(user) {
     }
 
     // 3. Diğer Menüler: Rol Kontrolü + Yetki Matrisi Kontrolü
-    const isSpecialist = isAdmin || isIk || isSup || isDanisma;
+    // HARDCODED ROLES REMOVED: Now relying solely on permissions!
+    // const isSpecialist = isAdmin || isIk || isSup || isDanisma; // REMOVED
 
     if (mgmtLink) {
-        mgmtLink.style.display = (isSpecialist && checkPermission('manage_users')) ? 'block' : 'none';
+        // Sadece yetkiye bak (Admin veya yetkisi olan)
+        mgmtLink.style.display = checkPermission('manage_users') ? 'block' : 'none';
     }
     if (logsLink) {
-        logsLink.style.display = ((isAdmin || isIk) && checkPermission('view_logs')) ? 'block' : 'none';
+        logsLink.style.display = checkPermission('view_logs') ? 'block' : 'none';
     }
     if (reportLink) {
-        reportLink.style.display = ((isAdmin || isIk) && checkPermission('export_excel')) ? 'block' : 'none';
+        reportLink.style.display = checkPermission('export_excel') ? 'block' : 'none';
     }
 
     switchView('dashboard');
@@ -186,8 +189,7 @@ function initDashboardWithUser(user) {
         }
     }
 
-    // Load Permissions in background if not loaded
-    loadRolePermissions();
+    // Load Permissions removed (moved to top with await)
 }
 
 // === UTILITY FUNCTIONS === */
@@ -293,7 +295,7 @@ async function handleLogin(e) {
         }
 
         // 5. Dashboard'a Git
-        initDashboardWithUser(currentUser);
+        await initDashboardWithUser(currentUser);
         Swal.fire('Başarılı', 'Giriş yapıldı!', 'success');
 
     } catch (err) {
@@ -367,7 +369,7 @@ async function promptChangePassword(isForced = false) {
             Swal.fire('Başarılı', 'Şifreniz değiştirildi!', 'success');
 
             // 4. Dashboard'a git
-            initDashboardWithUser(currentUser);
+            await initDashboardWithUser(currentUser);
         } catch (err) {
             console.error('GENEL HATA:', err);
             Swal.fire('Hata', 'Şifre değiştirilemedi: ' + err.message, 'error');
@@ -437,23 +439,32 @@ function renderDashboard(role) {
     if (!container) return;
 
     const uRole = normalizeText(role);
-    const isIk = uRole.includes('ik');
-    const isSup = uRole === 'spv' || uRole === 'tl';
-    const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+    // HARDCODED CHECKS REMOVED: Now using permissions!
+    // const isIk = uRole.includes('ik'); 
+    // const isSup = uRole === 'spv' || uRole === 'tl';
+    // const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+
+    // IK detection for specific UI tweaks (hiding 'New Request' button if they rely on it)
+    // We can keep a loose check for 'ik' string just for the 'New Request' hiding logic if desired,
+    // OR better: rely on 'tab_new_request' permission being FALSE for IK in the matrix.
+    // Let's rely on permissions.
+
     const typesArray = Array.isArray(window.leaveTypes) ? window.leaveTypes : ['Yıllık İzin'];
     const leaveTypesOptions = typesArray.map(type => `<option>${esc(type)}</option>`).join('');
     const monthOptions = getMonthOptions().map(m => `<option value="${m.val}">${m.label}</option>`).join('');
 
-    const isAdmin = uRole === 'admin';
-    const isManager = isAdmin || isIk || isSup || isDanisma;
+    // "Manager" is anyone who can view requests.
+    const isManager = checkPermission('tab_requests');
+    const canRequest = checkPermission('tab_new_request');
+    const canHistory = checkPermission('tab_history');
 
-    // Herkes (İK hariç) talep oluşturabilir
+    // Herkes (İK hariç) talep oluşturabilir -> Artık yetkiye bağlı
     let html = `
         <div class="panel-info">👋 <strong>Hoş Geldin!</strong> Sistemi buradan yönetebilirsin.</div>
         <div class="tabs">
-            ${isManager && checkPermission('tab_requests') ? `<button class="tab-btn active" onclick="showTab('admin-panel', this)">Talep Yönetimi</button>` : ''}
-            ${!isIk && checkPermission('tab_new_request') ? `<button class="tab-btn ${!isManager ? 'active' : ''}" onclick="showTab('new-req', this)">İzin Talebi</button>` : ''}
-            ${!isIk && checkPermission('tab_history') ? `<button class="tab-btn" onclick="showTab('my-req', this)">Geçmişim</button>` : ''}
+            ${isManager ? `<button class="tab-btn active" onclick="showTab('admin-panel', this)">Talep Yönetimi</button>` : ''}
+            ${canRequest ? `<button class="tab-btn ${!isManager ? 'active' : ''}" onclick="showTab('new-req', this)">İzin Talebi</button>` : ''}
+            ${canHistory ? `<button class="tab-btn" onclick="showTab('my-req', this)">Geçmişim</button>` : ''}
         </div>
 
         <!-- YÖNETİM PANELİ -->
@@ -505,7 +516,7 @@ function renderDashboard(role) {
         ` : ''}
 
         <!-- TALEP FORMU -->
-        ${!isIk ? `
+        ${canRequest ? `
         <div id="tab-new-req" class="tab-content ${isManager ? 'hidden' : ''}">
             <form onsubmit="submitRequest(event)" autocomplete="off">
                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -538,8 +549,9 @@ function renderDashboard(role) {
                 </div>
                 <button type="submit" class="btn-primary">Talebi Gönder</button>
             </form>
-        </div>
+        </div>` : ''}
 
+        ${canHistory ? `
         <div id="tab-my-req" class="tab-content hidden">
             <div style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <div style="display:grid; grid-template-columns: 1fr auto; gap:15px; align-items:end;">
@@ -560,8 +572,8 @@ function renderDashboard(role) {
                     </td></tr>
                 </tbody>
             </table>
-        </div>
-        ` : ''}
+        </div>` : ''}
+
     `;
 
     container.innerHTML = html;
@@ -579,8 +591,8 @@ window.openUserMgmtModal = function () {
     const canAdd = checkPermission('user_add');
     const canList = checkPermission('user_list');
 
-    // Fix: Re-introduce isIk or equivalent for the UI logic
-    const isIk = ['İK', 'IK', 'ADMIN'].includes(role);
+    // "Admin/İK" fields (Role, Project, 2FA) are shown if user has user_edit_role permission
+    const canEditRoles = checkPermission('user_edit_role');
 
     let html = `
         <div class="mgmt-tabs">
@@ -597,7 +609,7 @@ window.openUserMgmtModal = function () {
                 <label>E-Posta (2FA İçin)</label>
                 <input type="email" id="new-u-email" class="swal2-input" placeholder="ornek@mail.com">
             </div>
-            ${isIk ? `
+            ${canEditRoles ? `
                 <div class="form-group">
                     <label>Rol</label>
                     <select id="new-u-role" class="swal2-input">
@@ -755,22 +767,12 @@ window.submitAddUser = async function () {
     try {
         const response = await fetch(PASSWORD_RESET_API_URL, {
             method: 'POST',
-            mode: 'no-cors', // Google Apps Script Web App requirement for simple requests sometimes, but usually CORS is handled by GAS if setup right.
-            // Wait, GAS Web App return proper CORS headers if likely. 
-            // My previous instructions for password reset used 'no-cors'? No, they used simple fetch?
-            // Actually, GAS returns 302 redirect usually.
-            // Let's use the same method as we might use for password reset if implemented in frontend?
-            // Wait, password reset was implemented in frontend `resetUserPassword` (lines 728+).
-            // Let's check that function first to see how it calls the API.
-            // Ah, I see `resetUserPassword` function in `app.js`. Let me check it first to match the pattern.
-            // I'll assume standard POST for now but 'no-cors' might prevent reading the response.
-            // If I look at `admin_tools/password_reset_api.gs`, it uses `ContentService.createTextOutput` which usually supports CORS if deployed as 'Anyone'.
-            // Let's try standard fetch.
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain' }, // Avoid preflight OPTIONS
             body: JSON.stringify({
                 action: 'create_user',
                 email: finalEmail,
-                password: '123456', // Default password
+                password: '123456',
                 profileData: {
                     username: u,
                     full_name: fn,
@@ -782,13 +784,17 @@ window.submitAddUser = async function () {
             })
         });
 
-        const resData = await response.json();
+        const raw = await response.text();
+        let resData;
+        try {
+            resData = JSON.parse(raw);
+        } catch (e) {
+            throw new Error('API JSON dönmedi: ' + raw.slice(0, 120));
+        }
 
         if (resData.success) {
             Swal.fire('Başarılı', `Kullanıcı oluşturuldu!\nKullanıcı Adı: ${u}\nŞifre: 123456`, 'success');
-            // Refresh list
             loadUserListInternal();
-            // Clear form
             document.getElementById('new-u-name').value = '';
             document.getElementById('new-u-fullname').value = '';
         } else {
@@ -971,16 +977,11 @@ async function loadAdminRequests() {
 
     // SCOPE FILTERING
     if (currentUser) {
-        const role = (currentUser.role || '').toUpperCase();
-        // Check if Admin/IK (Can see all)
-        const isFullAccess = ['İK', 'IK', 'ADMIN'].includes(role) || checkPermission('view_all_projects');
-
-        console.log('🔍 LoadAdminRequests Debug:', { role, isFullAccess, user: currentUser.user });
+        const isFullAccess = checkPermission('view_all_projects');
 
         if (!isFullAccess) {
             const scopes = currentUser.managed_scopes || [];
             mappedRequests = mappedRequests.filter(r => {
-                // Normalize for comparison
                 const rProj = (r.project || '').trim().toLocaleUpperCase('tr-TR');
                 const uProj = (currentUser.project || '').trim().toLocaleUpperCase('tr-TR');
 
@@ -1643,22 +1644,6 @@ async function loadRolePermissions() {
     } catch (err) {
         console.error('RBAC Error:', err);
     }
-}
-
-function checkPermission(resource) {
-    if (!currentUser) return false;
-    // Normalize role check
-    const r = (currentUser.role || '').toLowerCase();
-
-    // 1. ADMIN always true
-    if (r === 'admin') return true;
-
-    // 2. Others: Check if specific permission is granted (TRUE)
-    if (window.rolePermissions && window.rolePermissions[r]) {
-        if (window.rolePermissions[r][resource] === true) return true;
-    }
-
-    return false;
 }
 
 window.openPermissionModal = async function () {
