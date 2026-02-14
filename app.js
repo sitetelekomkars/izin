@@ -233,7 +233,7 @@ async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     const statusDiv = document.getElementById('login-status');
-    const userEmail = document.getElementById('username').value;
+    const usernameInput = document.getElementById('username').value.trim();
     const passVal = document.getElementById('password').value;
 
     statusDiv.innerText = 'Giriş yapılıyor...';
@@ -241,7 +241,10 @@ async function handleLogin(e) {
     btn.disabled = true;
 
     try {
-        // 1. Supabase Auth ile Giriş
+        // 1. Kullanıcı adından email oluştur (migration sırasında böyle kaydedildi)
+        const userEmail = usernameInput.includes('@') ? usernameInput : `${usernameInput}@example.com`;
+
+        // 2. Supabase Auth ile Giriş
         const { data, error } = await sb.auth.signInWithPassword({
             email: userEmail,
             password: passVal
@@ -249,7 +252,7 @@ async function handleLogin(e) {
 
         if (error) throw error;
 
-        // 2. Profil Verilerini Çek
+        // 3. Profil Verilerini Çek
         const { data: profile, error: pError } = await sb
             .from('profiles')
             .select('*')
@@ -258,7 +261,7 @@ async function handleLogin(e) {
 
         if (pError) throw pError;
 
-        // 3. Oturumu Başlat
+        // 4. Oturumu Başlat
         sessionProfile = profile;
         currentUser = {
             user: profile.username,
@@ -289,6 +292,76 @@ async function handleLogin(e) {
         statusDiv.className = 'status-error';
         btn.disabled = false;
         Swal.fire('Giriş Hatası', err.message, 'error');
+    }
+}
+
+async function promptChangePassword(isForced = false) {
+    const { value: formValues } = await Swal.fire({
+        title: isForced ? 'Şifre Değiştirme Zorunlu' : 'Şifre Değiştir',
+        html: `
+            <input id="swal-new-password" type="password" class="swal2-input" placeholder="Yeni Şifre" required>
+            <input id="swal-confirm-password" type="password" class="swal2-input" placeholder="Yeni Şifre (Tekrar)" required>
+        `,
+        focusConfirm: false,
+        showCancelButton: !isForced,
+        cancelButtonText: 'İptal',
+        confirmButtonText: 'Değiştir',
+        allowOutsideClick: !isForced,
+        allowEscapeKey: !isForced,
+        preConfirm: () => {
+            const newPass = document.getElementById('swal-new-password').value;
+            const confirmPass = document.getElementById('swal-confirm-password').value;
+
+            if (!newPass || !confirmPass) {
+                Swal.showValidationMessage('Lütfen tüm alanları doldurun');
+                return false;
+            }
+            if (newPass !== confirmPass) {
+                Swal.showValidationMessage('Şifreler eşleşmiyor');
+                return false;
+            }
+            if (newPass.length < 6) {
+                Swal.showValidationMessage('Şifre en az 6 karakter olmalı');
+                return false;
+            }
+            return { newPassword: newPass };
+        }
+    });
+
+    if (formValues) {
+        try {
+            // 1. Şifreyi güncelle
+            const { error: updateError } = await sb.auth.updateUser({
+                password: formValues.newPassword
+            });
+
+            if (updateError) throw updateError;
+
+            // 2. force_password_change bayrağını FALSE yap
+            const { error: profileError } = await sb
+                .from('profiles')
+                .update({ force_password_change: false })
+                .eq('id', sessionProfile.id);
+
+            if (profileError) throw profileError;
+
+            // 3. Session'ı güncelle
+            sessionProfile.force_password_change = false;
+
+            Swal.fire('Başarılı', 'Şifreniz değiştirildi!', 'success');
+
+            // 4. Dashboard'a git
+            initDashboardWithUser(currentUser);
+        } catch (err) {
+            Swal.fire('Hata', 'Şifre değiştirilemedi: ' + err.message, 'error');
+            if (isForced) {
+                // Zorunlu değişiklik başarısız olduysa tekrar dene
+                promptChangePassword(true);
+            }
+        }
+    } else if (isForced) {
+        // Kullanıcı iptal edemez, tekrar sor
+        promptChangePassword(true);
     }
 }
 
