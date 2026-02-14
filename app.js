@@ -1429,8 +1429,8 @@ window.openPermissionModal = async function () {
         .filter(r => r && r.toLowerCase() !== 'role' && r.toLowerCase() !== 'undefined' && r.toLowerCase() !== 'null' && r.length > 1)
         .sort();
 
-    // If empty (first run), add defaults
-    if (allRoles.length === 0) allRoles = ['Admin', 'İK', 'TL', 'SPV', 'Danışma'];
+    // If empty (first run or error), add minimal defaults
+    if (allRoles.length === 0) allRoles = ['Admin'];
 
     let html = `
         <div class="alert-info" style="text-align:left; font-size:0.85rem; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
