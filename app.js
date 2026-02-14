@@ -790,8 +790,12 @@ window.submitAddUser = async function () {
         if (resData.success) {
             Swal.fire('Başarılı', `Kullanıcı oluşturuldu!\nKullanıcı Adı: ${u}\nŞifre: 123456`, 'success');
             loadUserListInternal();
-            document.getElementById('new-u-name').value = '';
-            document.getElementById('new-u-fullname').value = '';
+
+            // Modal kapandığı için bu elementler artık DOM'da olmayabilir, kontrol et
+            const nameEl = document.getElementById('new-u-name');
+            const fullEl = document.getElementById('new-u-fullname');
+            if (nameEl) nameEl.value = '';
+            if (fullEl) fullEl.value = '';
         } else {
             throw new Error(resData.error || 'Bilinmeyen hata');
         }
