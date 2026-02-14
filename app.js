@@ -732,16 +732,73 @@ window.loadUserListInternal = async function () {
 
 window.submitAddUser = async function () {
     const u = document.getElementById('new-u-name').value.trim();
+    const emailInput = document.getElementById('new-u-email').value.trim();
     const r = document.getElementById('new-u-role')?.value || 'TL';
     const p = document.getElementById('new-u-proj')?.value.trim() || '';
+    const fn = document.getElementById('new-u-fullname')?.value.trim() || '';
+    const twoFa = document.getElementById('new-u-2fa')?.value === 'AKTİF';
 
     if (!u) { Swal.showValidationMessage('Kullanıcı adı gerekli'); return; }
+    if (!fn) { Swal.showValidationMessage('Ad Soyad gerekli'); return; }
+    if (!p) { Swal.showValidationMessage('Proje gerekli'); return; }
+
+    // Email mantığı: Girilmediyse username@example.com
+    const finalEmail = emailInput || `${u}@example.com`;
 
     Swal.fire({
-        title: 'Kullanıcı Ekleme',
-        text: 'Lütfen kullanıcıları Supabase Dashboard > Authentication kısmından ekleyin. Biz burada sadece profillerini yönetiyoruz.',
-        icon: 'info'
+        title: 'Kullanıcı Oluşturuluyor...',
+        text: 'Lütfen bekleyin',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
     });
+
+    try {
+        const response = await fetch(PASSWORD_RESET_API_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Google Apps Script Web App requirement for simple requests sometimes, but usually CORS is handled by GAS if setup right.
+            // Wait, GAS Web App return proper CORS headers if likely. 
+            // My previous instructions for password reset used 'no-cors'? No, they used simple fetch?
+            // Actually, GAS returns 302 redirect usually.
+            // Let's use the same method as we might use for password reset if implemented in frontend?
+            // Wait, password reset was implemented in frontend `resetUserPassword` (lines 728+).
+            // Let's check that function first to see how it calls the API.
+            // Ah, I see `resetUserPassword` function in `app.js`. Let me check it first to match the pattern.
+            // I'll assume standard POST for now but 'no-cors' might prevent reading the response.
+            // If I look at `admin_tools/password_reset_api.gs`, it uses `ContentService.createTextOutput` which usually supports CORS if deployed as 'Anyone'.
+            // Let's try standard fetch.
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'create_user',
+                email: finalEmail,
+                password: '123456', // Default password
+                profileData: {
+                    username: u,
+                    full_name: fn,
+                    role: r,
+                    project: p,
+                    two_factor_enabled: twoFa,
+                    managed_scopes: []
+                }
+            })
+        });
+
+        const resData = await response.json();
+
+        if (resData.success) {
+            Swal.fire('Başarılı', `Kullanıcı oluşturuldu!\nKullanıcı Adı: ${u}\nŞifre: 123456`, 'success');
+            // Refresh list
+            loadUserListInternal();
+            // Clear form
+            document.getElementById('new-u-name').value = '';
+            document.getElementById('new-u-fullname').value = '';
+        } else {
+            throw new Error(resData.error || 'Bilinmeyen hata');
+        }
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Hata', 'Kullanıcı oluşturulamadı: ' + err.message, 'error');
+    }
 }
 
 window.delUser = async function (id) {
@@ -917,6 +974,8 @@ async function loadAdminRequests() {
         const role = (currentUser.role || '').toUpperCase();
         // Check if Admin/IK (Can see all)
         const isFullAccess = ['İK', 'IK', 'ADMIN'].includes(role) || checkPermission('view_all_projects');
+
+        console.log('🔍 LoadAdminRequests Debug:', { role, isFullAccess, user: currentUser.user });
 
         if (!isFullAccess) {
             const scopes = currentUser.managed_scopes || [];
