@@ -579,6 +579,9 @@ window.openUserMgmtModal = function () {
     const canAdd = checkPermission('user_add');
     const canList = checkPermission('user_list');
 
+    // Fix: Re-introduce isIk or equivalent for the UI logic
+    const isIk = ['İK', 'IK', 'ADMIN'].includes(role);
+
     let html = `
         <div class="mgmt-tabs">
             ${canAdd ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
