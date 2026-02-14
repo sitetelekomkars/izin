@@ -798,10 +798,123 @@ tr:hover td {
     }
 
     .action-btn {
-        width: 100%;
-        min-width: unset;
-        font-size: 0.8rem;
+        justify-content: center;
     }
+}
+
+/* Permission Table Styles */
+.permission-table-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #eee;
+    margin-top: 10px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.permission-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: max-content;
+    /* Force scroll on small screens */
+}
+
+.permission-table th,
+.permission-table td {
+    padding: 10px 15px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    /* Prevent wrapping */
+}
+
+.permission-table th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-weight: 700;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* First Column Sticky (Role Name) */
+.permission-table td:first-child,
+.permission-table th:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 11;
+    /* Higher than headers */
+    border-right: 2px solid #eee;
+}
+
+.permission-table th:first-child {
+    z-index: 12;
+    /* Corner cell is highest */
+    background: #f1f5f9;
+}
+
+/* Toggle Switch Styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: #2196F3;
+}
+
+input:focus+.slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked+.slider:before {
+    -webkit-transform: translateX(14px);
+    -ms-transform: translateX(14px);
+    transform: translateX(14px);
+}
+
+width: 100%;
+min-width: unset;
+font-size: 0.8rem;
+}
 }
 
 /* Sayfa Kaydırma Akıcılığı */
