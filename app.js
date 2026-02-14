@@ -89,7 +89,10 @@ window.permissionResources = [
     { key: 'tab_new_request', label: 'Sekme: İzin İste' },
     { key: 'tab_history', label: 'Sekme: Geçmişim' },
     { key: 'user_add', label: 'Personel: Ekle' },
-    { key: 'user_list', label: 'Personel: Liste' }
+    { key: 'user_list', label: 'Personel: Liste' },
+    { key: 'auth_tl', label: 'Yetki: TL Katmanı (Onay)' },
+    { key: 'auth_spv', label: 'Yetki: SPV Katmanı (Onay)' },
+    { key: 'auth_ik', label: 'Yetki: İK Katmanı (Onay)' }
 ];
 
 // SAYFA YÜKLENDİĞİNDE
@@ -867,19 +870,20 @@ function renderPage(page) {
         const s = r.status;
 
         if (checkPermission('approve_reject')) {
-            if (s === 'tl_bekliyor' && role === 'TL') {
+            const isAdmin = role === 'ADMIN';
+            if (s === 'tl_bekliyor' && (isAdmin || checkPermission('auth_tl'))) {
                 actionHtml = `
                     <div class="action-btns">
                         <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
                         <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                     </div>`;
-            } else if (s === 'spv_bekliyor' && role === 'SPV') {
+            } else if (s === 'spv_bekliyor' && (isAdmin || checkPermission('auth_spv'))) {
                 actionHtml = `
                     <div class="action-btns">
                         <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
                         <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
                     </div>`;
-            } else if (s === 'ik_bekliyor' && (role === 'İK' || role === 'IK')) {
+            } else if (s === 'ik_bekliyor' && (isAdmin || checkPermission('auth_ik') || role === 'İK' || role === 'IK')) {
                 actionHtml = `
                     <div class="action-btns">
                         <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
