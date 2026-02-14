@@ -85,8 +85,12 @@ window.permissionResources = [
     { key: 'admin_panel', label: 'Admin Paneli' },
     { key: 'export_excel', label: 'Excel Rapor' },
     { key: 'view_logs', label: 'Sistem Logları' },
-    { key: 'manage_users', label: 'Personel Yönetimi' },
-    { key: 'approve_reject', label: 'Onay/Ret İşlemi' }
+    { key: 'tab_requests', label: 'Tab: Talep Yönetimi' },
+    { key: 'tab_new_request', label: 'Tab: İzin Talebi' },
+    { key: 'tab_history', label: 'Tab: Geçmişim' },
+    { key: 'user_add', label: 'Personel: Ekleme' },
+    { key: 'user_list', label: 'Personel: Listeleme' },
+    { key: 'manage_users', label: 'Personel Yönetimi (Menü)' }
 ];
 
 // SAYFA YÜKLENDİĞİNDE
@@ -432,9 +436,9 @@ function renderDashboard(role) {
     let html = `
         <div class="panel-info">👋 <strong>Hoş Geldin!</strong> Sistemi buradan yönetebilirsin.</div>
         <div class="tabs">
-            ${isManager ? `<button class="tab-btn active" onclick="showTab('admin-panel', this)">Talep Yönetimi</button>` : ''}
-            ${!isIk ? `<button class="tab-btn ${!isManager ? 'active' : ''}" onclick="showTab('new-req', this)">İzin Talebi</button>` : ''}
-            ${!isIk ? `<button class="tab-btn" onclick="showTab('my-req', this)">Geçmişim</button>` : ''}
+            ${isManager && checkPermission('tab_requests') ? `<button class="tab-btn active" onclick="showTab('admin-panel', this)">Talep Yönetimi</button>` : ''}
+            ${!isIk && checkPermission('tab_new_request') ? `<button class="tab-btn ${!isManager ? 'active' : ''}" onclick="showTab('new-req', this)">İzin Talebi</button>` : ''}
+            ${!isIk && checkPermission('tab_history') ? `<button class="tab-btn" onclick="showTab('my-req', this)">Geçmişim</button>` : ''}
         </div>
 
         <!-- YÖNETİM PANELİ -->
@@ -560,8 +564,8 @@ window.openUserMgmtModal = function () {
 
     let html = `
         <div class="mgmt-tabs">
-            ${isIk ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
-            <button class="mgmt-tab-btn ${!isIk ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>
+            ${isIk && checkPermission('user_add') ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
+            ${checkPermission('user_list') ? `<button class="mgmt-tab-btn ${!isIk ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>` : ''}
         </div>
         ${isIk ? `
         <div id="mgmt-tab-add" class="mgmt-tab-content">
@@ -1541,6 +1545,9 @@ window.openPermissionModal = async function () {
 
     await loadRolePermissions(); // Refresh
     const permissions = window.rolePermissions || {};
+
+    const roles = ['İK', 'TL', 'SPV', 'Danışma', 'MT', 'Kalite', 'Bilgi İşlem', 'Telesatis', 'Chat', 'IstChat'];
+    // Sheet'ten gelen roller de olabilir
     const sheetRoles = Object.keys(permissions);
     const allRoles = [...new Set([...roles, ...sheetRoles])].sort();
 
