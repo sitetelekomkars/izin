@@ -68,7 +68,8 @@ self.addEventListener('fetch', (event) => {
             }
 
             return fetch(event.request).then((response) => {
-                if (response.status === 200) {
+                // SADECE GET isteklerini ve başarılı yanıtları cache'le
+                if (event.request.method === 'GET' && response.status === 200) {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, responseClone);
