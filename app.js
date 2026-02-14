@@ -269,6 +269,7 @@ async function handleLogin(e) {
         // 4. Oturumu Başlat
         sessionProfile = profile;
         currentUser = {
+            id: profile.id, // Added ID field
             user: profile.username,
             fullName: profile.full_name,
             role: profile.role,
@@ -335,20 +336,27 @@ async function promptChangePassword(isForced = false) {
 
     if (formValues) {
         try {
+            console.log('1. Şifre güncelleme başlatılıyor...');
             // 1. Şifreyi güncelle
             const { error: updateError } = await sb.auth.updateUser({
                 password: formValues.newPassword
             });
 
             if (updateError) throw updateError;
+            console.log('✅ Auth şifresi güncellendi.');
 
+            console.log(`2. Profil güncelleniyor (ID: ${sessionProfile.id})...`);
             // 2. force_password_change bayrağını FALSE yap
             const { error: profileError } = await sb
                 .from('profiles')
                 .update({ force_password_change: false })
                 .eq('id', sessionProfile.id);
 
-            if (profileError) throw profileError;
+            if (profileError) {
+                console.error('❌ Profil güncelleme hatası:', profileError);
+                throw profileError;
+            }
+            console.log('✅ Profil güncellendi (force_password_change: false).');
 
             // 3. Session'ı güncelle
             sessionProfile.force_password_change = false;
@@ -358,6 +366,7 @@ async function promptChangePassword(isForced = false) {
             // 4. Dashboard'a git
             initDashboardWithUser(currentUser);
         } catch (err) {
+            console.error('GENEL HATA:', err);
             Swal.fire('Hata', 'Şifre değiştirilemedi: ' + err.message, 'error');
             if (isForced) {
                 // Zorunlu değişiklik başarısız olduysa tekrar dene
@@ -417,37 +426,7 @@ function switchView(viewName) {
     }
 }
 
-async function promptChangePassword(isForced = false) {
-    const { value: p1 } = await Swal.fire({
-        title: isForced ? '⚠️ Şifrenizi Güncelleyin' : 'Şifre Değiştir',
-        text: isForced ? 'Güvenliğiniz için varsayılan şifreyi (123456) değiştirmeniz gerekmektedir.' : '',
-        input: 'password',
-        placeholder: 'Yeni Şifreniz',
-        showCancelButton: !isForced,
-        confirmButtonText: 'Güncelle',
-        cancelButtonText: 'İptal',
-        allowOutsideClick: !isForced,
-        allowEscapeKey: !isForced,
-        inputValidator: (value) => {
-            if (!value || value === '1234') {
-                return 'Lütfen 1234 dışında güvenli bir şifre belirleyin!';
-            }
-        }
-    });
-    if (p1) {
-        const { error } = await sb.auth.updateUser({ password: p1 });
-
-        if (!error) {
-            // Also update profile to clear force_password_change
-            await sb.from('profiles').update({ force_password_change: false }).eq('id', currentUser.id);
-
-            Swal.fire('Başarılı', 'Şifreniz güncellendi', 'success');
-            if (isForced) logout();
-        } else {
-            Swal.fire('Hata', error.message || 'Hata oluştu', 'error');
-        }
-    }
-}
+// Duplicate promptChangePassword removed. Using the robust version defined above.
 
 /* === DASHBOARD RENDER === */
 function renderDashboard(role) {
