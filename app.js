@@ -824,7 +824,7 @@ window.resetUserPassword = async function (userId, username) {
 
     const result = await Swal.fire({
         title: 'Şifre Sıfırlama',
-        html: `<strong>${username}</strong> kullanıcısının şifresi <strong>1234</strong> olarak sıfırlanacak.<br><br>
+        html: `<strong>${username}</strong> kullanıcısının şifresi <strong>123456</strong> olarak sıfırlanacak.<br><br>
                Kullanıcı ilk girişte yeni şifre belirlemeye zorlanacak.`,
         icon: 'warning',
         showCancelButton: true,
@@ -852,7 +852,7 @@ window.resetUserPassword = async function (userId, username) {
         const data = await response.json();
 
         if (data.success) {
-            Swal.fire('Başarılı', `${username} kullanıcısının şifresi 1234 olarak sıfırlandı.`, 'success');
+            Swal.fire('Başarılı', `${username} kullanıcısının şifresi 123456 olarak sıfırlandı.`, 'success');
             loadUserListInternal();
         } else {
             throw new Error(data.error || 'Bilinmeyen hata');
