@@ -1541,9 +1541,6 @@ window.openPermissionModal = async function () {
 
     await loadRolePermissions(); // Refresh
     const permissions = window.rolePermissions || {};
-
-    const roles = ['İK', 'TL', 'SPV', 'Danışma', 'MT', 'Kalite', 'Bilgi İşlem', 'Telesatis', 'Chat', 'IstChat'];
-    // Sheet'ten gelen roller de olabilir
     const sheetRoles = Object.keys(permissions);
     const allRoles = [...new Set([...roles, ...sheetRoles])].sort();
 
