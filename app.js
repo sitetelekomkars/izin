@@ -1,9 +1,16 @@
 /* 
-  app.js (Ultra Güvenli & Token Tabanlı Frontend)
+  app.js (Supabase Powered & Ultra Canavar)
 */
+const SUPABASE_URL = 'https://cmewgawdwacdrijbvmex.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Kz5GU3lYBeawTncA78qvSA_X7pHQrHo';
+// Initialize Supabase client
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const API_URL = 'https://script.google.com/macros/s/AKfycbzBwT_kStscadwaqL9tFeC03Z2_h94J_hWk3bf7ktxXFMTW3xxFMwuOtRimSgx9PYh9Xw/exec';
 
 let currentUser = null;
+let sessionProfile = null; // Supabase Profile data
 
 // --- PWA & SERVICE WORKER KAYDI ---
 if ('serviceWorker' in navigator) {
@@ -233,108 +240,63 @@ async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     const statusDiv = document.getElementById('login-status');
-    const userVal = document.getElementById('username').value;
+    const userEmail = document.getElementById('username').value;
     const passVal = document.getElementById('password').value;
 
-    statusDiv.innerText = 'Kontrol ediliyor...';
+    statusDiv.innerText = 'Giriş yapılıyor...';
     statusDiv.className = 'status-loading';
     btn.disabled = true;
 
-    const res = await callApi({
-        action: 'login',
-        user: userVal,
-        pass: passVal
-    });
-
-    // Durum 1: İlk Kurulum (QR Kod Göster)
-    if (res && res.status === '2fa_setup') {
-        const qrChartUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(res.qrUrl)}`;
-
-        const { value: otpCode } = await Swal.fire({
-            title: '🔐 2FA Kurulumu',
-            html: `
-                <p style="font-size:0.9rem; color:#666;">Google Authenticator uygulamasından bu kodu taratın:</p>
-                <img src="${qrChartUrl}" style="margin:15px 0; border:1px solid #eee; padding:10px; border-radius:10px;">
-                <p style="font-size:0.8rem; font-weight:bold; color:#2563eb;">Anahtar: ${res.secret}</p>
-                <p style="font-size:0.85rem; margin-top:10px;">Uygulamadaki 6 haneli kodu girerek eşleştirin:</p>
-            `,
-            input: 'text',
-            inputAttributes: { maxlength: 6, style: 'text-align:center; font-size:24px; letter-spacing:5px;' },
-            showCancelButton: true,
-            confirmButtonText: 'Doğrula ve Bitir',
-            allowOutsideClick: false,
-            preConfirm: (code) => {
-                if (!code || code.length !== 6) { Swal.showValidationMessage('6 haneli kodu girin'); }
-                return code;
-            }
+    try {
+        // 1. Supabase Auth ile Giriş
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: userEmail,
+            password: passVal
         });
 
-        if (otpCode) {
-            Swal.showLoading();
-            const verifyRes = await callApi({
-                action: 'verify2fa',
-                user: userVal,
-                code: otpCode,
-                isSetup: true,
-                setupSecret: res.secret,
-                forceChange: res.forceChange // Bu bilgiyi bir sonraki adıma taşı
-            });
-            if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
-            else { Swal.fire('Hata', 'Kurulum başarısız, kod hatalı.', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
-        } else { btn.disabled = false; statusDiv.innerText = ''; }
-        return;
-    }
+        if (error) throw error;
 
-    // Durum 2: Normal Giriş (Kod Sor)
-    if (res && res.status === '2fa_required') {
-        const { value: otpCode } = await Swal.fire({
-            title: '🔐 Güvenlik Kodu',
-            text: 'Authenticator uygulamasındaki 6 haneli kodu girin.',
-            input: 'text',
-            inputAttributes: { maxlength: 6, style: 'text-align:center; font-size:24px; letter-spacing:5px;' },
-            showCancelButton: true,
-            confirmButtonText: 'Giriş Yap',
-            allowOutsideClick: false,
-            preConfirm: (code) => {
-                if (!code || code.length !== 6) { Swal.showValidationMessage('6 haneli kodu girin'); }
-                return code;
-            }
-        });
+        // 2. Profil Verilerini Çek
+        const { data: profile, error: pError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
 
-        if (otpCode) {
-            Swal.showLoading();
-            const verifyRes = await callApi({ action: 'verify2fa', user: userVal, code: otpCode, forceChange: res.forceChange });
-            if (verifyRes && verifyRes.status !== 'error') completeLogin(verifyRes);
-            else { Swal.fire('Hata', 'Hatalı kod!', 'error'); btn.disabled = false; statusDiv.innerText = ''; }
-        } else { btn.disabled = false; statusDiv.innerText = ''; }
-        return;
-    }
+        if (pError) throw pError;
 
-    // Durum 3: Başarı
-    if (res && res.status === 'success') { completeLogin(res); }
-    else {
-        statusDiv.innerText = res.message || 'Hatalı giriş!';
-        statusDiv.className = 'status-error';
-        btn.disabled = false;
-    }
-}
+        // 3. Oturumu Başlat
+        sessionProfile = profile;
+        currentUser = {
+            user: profile.username,
+            fullName: profile.full_name,
+            role: profile.role,
+            project: profile.project,
+            token: data.session.access_token,
+            // Supabase handle token expiry automatically, but we store it for UI compatibility
+            tokenExpiry: Date.now() + (data.session.expires_in * 1000)
+        };
 
-function completeLogin(userData) {
-    const statusDiv = document.getElementById('login-status');
-    currentUser = userData;
-    sessionStorage.setItem('site_telekom_user', JSON.stringify(userData));
-    statusDiv.innerText = 'Giriş Başarılı!';
-    statusDiv.className = 'status-success';
+        sessionStorage.setItem('site_telekom_user', JSON.stringify(currentUser));
 
-    setTimeout(() => {
-        if (userData.forceChange) {
+        // 4. Dashboard'a Git
+        // 4. Force Password Change Check
+        if (profile.force_password_change) {
             statusDiv.innerText = '';
             promptChangePassword(true);
             return;
         }
-        initDashboardWithUser(userData);
-        statusDiv.innerText = '';
-    }, 800);
+
+        // 5. Dashboard'a Git
+        initDashboardWithUser(currentUser);
+        Swal.fire('Başarılı', 'Giriş yapıldı!', 'success');
+
+    } catch (err) {
+        statusDiv.innerText = 'Hata: ' + err.message;
+        statusDiv.className = 'status-error';
+        btn.disabled = false;
+        Swal.fire('Giriş Hatası', err.message, 'error');
+    }
 }
 
 function logout() {
@@ -791,7 +753,32 @@ window.toggle2faStatus = async function (targetUser, newStatus) {
 
 /* === REQUESTS MANAGEMENT === */
 async function loadAdminRequests() {
-    allAdminRequests = await callApi({ action: 'getRequests' });
+    const { data, error } = await sb
+        .from('requests')
+        .select('*');
+
+    if (error) {
+        console.error('Supabase Error:', error);
+        return;
+    }
+
+    // Map Supabase columns to existing app format
+    allAdminRequests = data.map(r => ({
+        id: String(r.id),
+        requester: r.user_id, // uuid
+        fullName: r.full_name,
+        project: r.project,
+        type: r.leave_type,
+        start: r.start_date,
+        end: r.end_date,
+        reason: r.reason,
+        status: r.status,
+        tl: r.tl_decision,
+        spv: r.spv_decision,
+        ik: r.ik_decision,
+        documentStatus: r.document_status || 'Bekliyor'
+    }));
+
     if (allAdminRequests && Array.isArray(allAdminRequests)) {
         allAdminRequests.forEach(r => r._dateObj = new Date(r.start));
         allAdminRequests.sort((a, b) => b._dateObj - a._dateObj);
@@ -970,19 +957,49 @@ window.processRequest = async function (id, decision) {
     }
 
     Swal.showLoading();
-    const res = await callApi({ action: 'updateStatus', id, decision, reason });
-    if (res.status === 'success') {
+
+    try {
+        const statusVal = decision === 'Reddedildi' ? `Reddedildi: ${reason}` : decision;
+
+        // Dynamic Role Check (Decoupled Logic from Implementation Plan)
+        // We replicate the backend logic for which column to update
+        const uRole = (currentUser.role || '').toUpperCase();
+        const perms = window.rolePermissions[uRole] || {};
+        const isAdmin = uRole === 'ADMIN';
+
+        let updateData = {};
+        if (isAdmin || perms['auth_ik'] || uRole.includes('IK')) {
+            updateData = { status: decision === 'Onaylandı' ? 'onaylandi' : 'red', ik_decision: statusVal };
+        } else if (perms['auth_spv'] || uRole === 'SPV') {
+            updateData = { status: decision === 'Onaylandı' ? 'ik_bekliyor' : 'red', spv_decision: statusVal };
+        } else if (perms['auth_tl'] || uRole === 'TL') {
+            updateData = { status: decision === 'Onaylandı' ? 'spv_bekliyor' : 'red', tl_decision: statusVal };
+        }
+
+        const { error } = await sb
+            .from('requests')
+            .update(updateData)
+            .eq('id', id);
+
+        if (error) throw error;
+
         Swal.fire('Başarılı', 'İşlem tamamlandı', 'success');
         loadAdminRequests();
-    } else {
-        Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+    } catch (err) {
+        Swal.fire('Hata', err.message || 'Hata oluştu', 'error');
     }
 }
 
 window.updateDocumentStatus = async function (id, status) {
     Swal.showLoading();
-    const res = await callApi({ action: 'updateDocumentStatus', id, status });
-    if (res.status === 'success') {
+    try {
+        const { error } = await sb
+            .from('requests')
+            .update({ document_status: status })
+            .eq('id', id);
+
+        if (error) throw error;
+
         Swal.fire({
             icon: 'success',
             title: 'Güncellendi',
@@ -991,8 +1008,8 @@ window.updateDocumentStatus = async function (id, status) {
             showConfirmButton: false
         });
         loadAdminRequests();
-    } else {
-        Swal.fire('Hata', res.message || 'Hata oluştu', 'error');
+    } catch (err) {
+        Swal.fire('Hata', err.message || 'Hata oluştu', 'error');
     }
 }
 
@@ -1000,80 +1017,89 @@ window.searchMyHistory = async function () {
     const fn = (document.getElementById('search-fullname')?.value || '').trim();
     const sn = (document.getElementById('search-project')?.value || '').trim();
 
-    // MT/Temsilci rolü kontrolü
     const isMT = currentUser && (currentUser.role === 'MT' || currentUser.role === 'Temsilci');
 
-    // Eğer MT değilse ve isim/sicil yazılmamışsa uyarı ver
-    // (Project alanı HTML'de 'sicil' id'si ile kalmış olabilir, ama logic'i project olarak güncelliyoruz)
     if (!isMT && !fn && !sn) {
         Swal.fire('Uyarı', 'Lütfen personel adı veya proje girerek sorgulama yapın.', 'warning');
         return;
     }
 
-    // Geçici olarak kaydet (UX için)
-    localStorage.setItem('mtd_fullname', fn);
-    localStorage.setItem('mtd_project', sn);
-
     const tbody = document.querySelector('#rep-table tbody');
     tbody.innerHTML = ' SORGULANIYOR...';
 
-    const res = await callApi({ action: 'getRequests' });
-    if (!res || !Array.isArray(res)) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
+    try {
+        let query = sb.from('requests').select('*');
 
-    const filtered = res.filter(r => {
-        const matchName = fn ? r.fullName.toLocaleLowerCase('tr-TR').includes(fn.toLocaleLowerCase('tr-TR')) : true;
-        const matchProject = sn ? r.project === sn : true;
-        return matchName && matchProject;
-    });
+        // Filter by user if MT (assuming user can only see their own)
+        // For Managers, filter results based on project/name if provided
+        if (fn) query = query.ilike('full_name', `%${fn}%`);
+        if (sn) query = query.eq('project', sn);
 
-    if (filtered.length === 0) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
+        const { data, error } = await query;
 
-    tbody.innerHTML = filtered.map(r => {
-        let statusHtml = r.status === 'red'
-            ? `<span class="status st-red">❌ Red</span><br><small>${esc(getDetailedRejectionInfo(r).reason)}</small>`
-            : getStatusBadge(r.status);
+        if (error) throw error;
+        if (!data || data.length === 0) { tbody.innerHTML = 'Kayıt bulunamadı.'; return; }
 
-        return `<tr>
-            <td>${new Date(r.start).toLocaleDateString('tr-TR')} - ${new Date(r.end).toLocaleDateString('tr-TR')}</td>
-            <td><b>${esc(r.type)}</b></td>
-            <td>${esc(r.reason || '-')}</td>
-            <td>${statusHtml}</td>
-        </tr>`;
-    }).join('');
+        tbody.innerHTML = data.map(r => {
+            let statusHtml = r.status === 'red'
+                ? `<span class="status st-red">❌ Red</span><br><small>${esc(r.ik_decision || r.spv_decision || r.tl_decision || '')}</small>`
+                : getStatusBadge(r.status);
+
+            return `<tr>
+                <td>${new Date(r.start_date).toLocaleDateString('tr-TR')} - ${new Date(r.end_date).toLocaleDateString('tr-TR')}</td>
+                <td><b>${esc(r.leave_type)}</b></td>
+                <td>${esc(r.reason || '-')}</td>
+                <td>${statusHtml}</td>
+            </tr>`;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = 'Hata: ' + err.message;
+    }
 }
 
 async function submitRequest(e) {
     e.preventDefault();
     const formData = {
         fullName: document.getElementById('fullname').value,
-        project: document.getElementById('sicil').value, // 'sicil' id'li kutuda artık Proje yazıyor
+        project: document.getElementById('sicil').value,
         type: document.getElementById('type').value,
         start: document.getElementById('start').value,
         end: document.getElementById('end').value,
         reason: document.getElementById('reason').value
     };
 
-    localStorage.setItem('mtd_fullname', formData.fullName);
-
     Swal.showLoading();
 
-    // STATUS FLOW LOGIC (TL requests go to SPV, others to IK)
+    // STATUS FLOW LOGIC
     let initialStatus = "tl_bekliyor";
-    if (currentUser.role === 'TL') initialStatus = "spv_bekliyor";
-    else if (['SPV', 'Danışma', 'İK', 'IK'].includes(currentUser.role)) initialStatus = "ik_bekliyor";
-    else if (['KALİTE', 'BİLGİ İŞLEM', 'DESTEK', 'EĞİTMEN'].includes((currentUser.role || "").toUpperCase())) initialStatus = "tl_bekliyor";
+    const uRole = (currentUser.role || "").toUpperCase();
+    if (uRole === 'TL') initialStatus = "spv_bekliyor";
+    else if (['SPV', 'İK', 'IK'].includes(uRole) || uRole.includes('DANI')) initialStatus = "ik_bekliyor";
 
-    const res = await callApi({ action: 'submitRequest', formData, initialStatus });
+    try {
+        const { data: userData } = await sb.auth.getUser();
+        const { error } = await sb
+            .from('requests')
+            .insert([{
+                user_id: userData.user ? userData.user.id : null,
+                full_name: formData.fullName,
+                project: formData.project,
+                leave_type: formData.type,
+                start_date: formData.start,
+                end_date: formData.end,
+                reason: formData.reason,
+                status: initialStatus
+            }]);
 
-    if (res.status === 'success') {
+        if (error) throw error;
+
         Swal.fire('Başarılı', 'Talebiniz iletildi', 'success');
         document.getElementById('reason').value = '';
         document.getElementById('start').value = '';
         document.getElementById('end').value = '';
-        // Taleplerim sekmesini göster ve orayı yenile (eğer varsa fonksiyona bağla)
         if (typeof searchMyHistory === 'function') searchMyHistory();
-    } else {
-        Swal.fire('Hata', res.message || 'Gönderilemedi', 'error');
+    } catch (err) {
+        Swal.fire('Hata', err.message || 'Gönderilemedi', 'error');
     }
 }
 
