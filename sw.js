@@ -2,11 +2,11 @@
   sw.js - Production Service Worker with Offline Support
 */
 
-const CACHE_NAME = 'izin-v3.0';
+const CACHE_NAME = 'izin-v2.2';
 const ASSETS = [
-    '/index.html',
-    '/style.css?v=12', // Match version in HTML
-    '/app.js',
+    '/index.html?v=21',
+    '/style.css?v=21',
+    '/app.js?v=21',
     '/corporate-logo.png',
     '/favicon.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap',
@@ -85,4 +85,3 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
-
