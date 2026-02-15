@@ -296,6 +296,7 @@ async function handleLogin(e) {
 
         // 5. Dashboard'a Git
         await initDashboardWithUser(currentUser);
+        await addLog('GİRİŞ', 'Sisteme giriş yapıldı');
         Swal.fire('Başarılı', 'Giriş yapıldı!', 'success');
 
     } catch (err) {
@@ -790,6 +791,7 @@ window.submitAddUser = async function () {
 
         if (resData.success) {
             Swal.fire('Başarılı', `Kullanıcı oluşturuldu!\nKullanıcı Adı: ${u}\nŞifre: 123456`, 'success');
+            await addLog('KULLANICI_EKLE', `${u} (${fn}) kullanıcısı oluşturuldu`);
             loadUserListInternal();
 
             // Modal kapandığı için bu elementler artık DOM'da olmayabilir, kontrol et
@@ -846,6 +848,7 @@ window.delUser = async function (id) {
 
         if (resData.success) {
             Swal.fire('Başarılı', 'Kullanıcı başarıyla silindi.', 'success');
+            await addLog('KULLANICI_SİL', `ID: ${id} kullanıcısı silindi`);
             loadUserListInternal();
         } else {
             throw new Error(resData.error || 'Silme işlemi başarısız');
@@ -1249,6 +1252,7 @@ window.processRequest = async function (id, decision) {
 
         if (error) throw error;
 
+        await addLog('TALEP_İŞLEM', `${id} nolu talep ${decision} olarak güncellendi`);
         Swal.fire('Başarılı', 'İşlem tamamlandı', 'success');
         loadAdminRequests();
     } catch (err) {
@@ -1404,13 +1408,29 @@ function showError(message) {
     });
 }
 
-/* === WINDOW BINDINGS === */
 window.handleLogin = handleLogin;
 window.logout = logout;
 window.toggleUserMenu = toggleUserMenu;
 window.submitRequest = submitRequest;
 window.applyFilters = applyFilters;
 window.changePage = changePage;
+
+/* === LOGGING SYSTEM === */
+async function addLog(action, details = '') {
+    try {
+        if (!currentUser) return;
+        const clientInfo = await getClientInfo();
+        await sb.from('logs').insert([{
+            user_id: currentUser.id,
+            username: currentUser.user,
+            role: currentUser.role,
+            project: currentUser.project,
+            action: action,
+            details: details,
+            client_info: { info: clientInfo, user_agent: navigator.userAgent }
+        }]);
+    } catch (e) { console.error('Logging Error:', e); }
+}
 
 window.showTab = function (id, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1442,7 +1462,8 @@ window.openSystemLogs = async function () {
         Swal.fire('Yetki Yok', 'Bu işlemi yapmaya yetkiniz bulunmamaktadır.', 'warning');
         return;
     }
-    Swal.fire({ title: 'Sistem Logları', html: '⏳ Yükleniyor...', width: 1000, showConfirmButton: false, showCloseButton: true });
+
+    Swal.showLoading(); // Show loading indicator immediately
 
     const { data, error } = await sb
         .from('logs')
@@ -1450,32 +1471,48 @@ window.openSystemLogs = async function () {
         .order('created_at', { ascending: false })
         .limit(200);
 
-    if (error) { Swal.update({ html: 'Hata: ' + error.message }); return; }
-    if (!data || data.length === 0) { Swal.update({ html: 'Henüz log kaydı yok.' }); return; }
+    if (error) {
+        Swal.fire('Hata', 'Loglar yüklenemedi', 'error');
+        return;
+    }
 
-    let tableHtml = `
-        <div style="max-height:500px; overflow:auto; text-align:left;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
-                <thead style="background:#f8f9fa; position:sticky; top:0;">
-                    <tr><th>Tarih</th><th>Kullanıcı</th><th>Rol</th><th>Proje</th><th>İşlem</th><th>Detay</th><th>IP</th></tr>
+    let logHtml = `
+        <div class="log-container">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>İşlem yapan</th>
+                        <th>Aksiyon</th>
+                        <th>Detay</th>
+                        <th>Cihaz/IP</th>
+                    </tr>
                 </thead>
                 <tbody>
-    `;
-    data.forEach(log => {
-        tableHtml += `
-            <tr style="border-bottom:1px solid #f0f0f0;">
-                <td style="padding:8px; white-space:nowrap;">${new Date(log.created_at).toLocaleString('tr-TR')}</td>
-                <td style="padding:8px;"><b>${esc(log.full_name || log.user_id)}</b></td>
-                <td style="padding:8px;">${esc(log.role)}</td>
-                <td style="padding:8px;">${esc(log.project)}</td>
-                <td style="padding:8px;">${esc(log.action)}</td>
-                <td style="padding:8px; color:#666;">${esc(log.detail)}</td>
-                <td style="padding:8px; font-family:monospace; color:#2563eb;">${esc(log.ip_address)}</td>
-            </tr>
-        `;
+                    ${data.map(l => `
+                        <tr>
+                            <td class="nowrap">${new Date(l.created_at).toLocaleString('tr-TR')}</td>
+                            <td>
+                                <strong>${esc(l.username)}</strong><br>
+                                <small style="color:#666">${esc(l.role)} / ${esc(l.project || '-')}</small>
+                            </td>
+                            <td><span class="log-badge log-${(l.action || '').toLowerCase()}">${esc(l.action)}</span></td>
+                            <td>${esc(l.details || '-')}</td>
+                            <td><small>${esc(l.client_info?.info || '-')}</small></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>`;
+
+    Swal.fire({
+        title: 'Sistem Logları',
+        html: logHtml,
+        width: '95%',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: { popup: 'premium-swal' }
     });
-    tableHtml += '</tbody></table></div>';
-    Swal.update({ html: tableHtml });
 }
 
 /* === EXCEL RAPOR (İK) === */
@@ -1633,8 +1670,10 @@ window.openReportModal = async function () {
         XLSX.writeFile(wb, filename);
 
         Swal.fire('Hazır ✅', `${filtered.length} kayıt indirildi: ${filename}`, 'success');
+        await addLog('EXCEL_RAPOR_OLUŞTUR', `Excel raporu oluşturuldu. Filtreler: ${JSON.stringify(formValues)}`);
     } catch (e) {
         Swal.fire('Hata', 'Excel oluşturulurken hata oluştu.', 'error');
+        await addLog('EXCEL_RAPOR_HATA', `Excel raporu oluşturulurken hata: ${e.message}`);
     }
 }
 
@@ -1747,6 +1786,7 @@ window.openPermissionModal = async function () {
              </div>`;
 
     Swal.update({ html: html });
+    await addLog('YETKİ_MATRİSİ_GÖRÜNTÜLE', 'Yetki matrisi görüntülendi');
 }
 
 window.saveRolePermissions = async function () {
@@ -1771,8 +1811,8 @@ window.saveRolePermissions = async function () {
             .upsert(updates, { onConflict: 'role_name,resource_key' });
 
         if (error) throw error;
-
-        Swal.fire('Başarılı', 'Tüm yetkiler kaydedildi.', 'success');
+        await addLog('YETKİ_GÜNCELLE', 'Rol yetki matrisi güncellendi');
+        Swal.fire('Başarılı', 'Yetkiler kaydedildi!', 'success');
 
         // Refresh local cache
         updates.forEach(u => {
