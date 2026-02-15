@@ -598,59 +598,76 @@ window.openUserMgmtModal = function () {
     let html = `
         <div class="mgmt-tabs">
             ${canAdd ? `<button class="mgmt-tab-btn active" data-mgmt-tab="add" onclick="switchMgmtTab('add', event)">➕ Kullanıcı Ekle</button>` : ''}
-            ${canList ? `<button class="mgmt-tab-btn ${!canAdd ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">📋 Kullanıcı Listesi</button>` : ''}
+            ${canList ? `<button class="mgmt-tab-btn ${!canAdd ? 'active' : ''}" data-mgmt-tab="list" onclick="switchMgmtTab('list', event)">👥 Personel Listesi</button>` : ''}
         </div>
         ${canAdd ? `
         <div id="mgmt-tab-add" class="mgmt-tab-content">
-            <div class="form-group">
-                <label>Kullanıcı Adı (TC Son 6)</label>
-                <input type="text" id="new-u-name" class="swal2-input" placeholder="Örn: 123456">
+            <div class="premium-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>TC SON 6 (Kullanıcı Adı)</label>
+                        <input type="text" id="new-u-name" maxlength="6" placeholder="Örn: 123456">
+                    </div>
+                    <div class="form-group">
+                        <label>PERSONEL AD SOYAD</label>
+                        <input type="text" id="new-u-fullname" placeholder="Ad Soyad">
+                    </div>
+                </div>
+                ${canEditRoles ? `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ROL</label>
+                            <select id="new-u-role">
+                                <option value="TL">Team Leader (TL)</option>
+                                <option value="SPV">Supervisor (SPV)</option>
+                                <option value="MT" selected>Temsilci (MT)</option>
+                                <option value="İK">İnsan Kaynakları (İK)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>PROJE / GRUP</label>
+                            <input type="text" id="new-u-proj" placeholder="Türksat, S Sport vb.">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>GÜVENLİK (2FA)</label>
+                        <select id="new-u-2fa">
+                            <option value="PASİF">🔴 Kapalı (Hızlı Giriş)</option>
+                            <option value="AKTİF">🟢 Açık (Authenticator Zorunlu)</option>
+                        </select>
+                    </div>
+                ` : `
+                    <div class="alert-info">ℹ️ Sadece kendi grubunuza personel ekleme yetkiniz var.</div>
+                `}
+                <button class="btn-primary" onclick="submitAddUser()" style="width:100%; margin-top:20px; height: 50px; font-size: 1rem;">
+                    🚀 Personeli Kaydet
+                </button>
             </div>
-            ${canEditRoles ? `
-                <div class="form-group">
-                    <label>Rol</label>
-                    <select id="new-u-role" class="swal2-input">
-                        <option value="TL">Team Leader (TL)</option>
-                        <option value="SPV">Supervisor (SPV)</option>
-                        <option value="MT">Temsilci (MT)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Proje/Grup</label>
-                    <input type="text" id="new-u-proj" class="swal2-input" placeholder="Proje adı">
-                </div>
-                <div class="form-group">
-                    <label>PERSONEL AD SOYAD</label>
-                    <input type="text" id="new-u-fullname" class="swal2-input" placeholder="Ad Soyad">
-                </div>
-                <div class="form-group">
-                    <label>Güvenlik (2FA)</label>
-                    <select id="new-u-2fa" class="swal2-input">
-                        <option value="PASİF">🔴 Kapalı (Sadece Şifre)</option>
-                        <option value="AKTİF">🟢 Açık (Authenticator Kod)</option>
-                    </select>
-                </div>
-            ` : `
-                <div class="alert-info">ℹ️ Sadece kendi grubunuza TL ekleyebilirsiniz.</div>
-            `}
-            <button class="btn-primary" onclick="submitAddUser()" style="margin-top:20px;">Ekle (İlk Şifre: 123456)</button>
         </div>
         ` : ''}
         <div id="mgmt-tab-list" class="mgmt-tab-content ${!canAdd ? '' : 'hidden'}">
-            <div id="user-list-container">Yükleniyor...</div>
+            <div class="mgmt-filter-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="user-search" onkeyup="filterUserList()" placeholder="İsim veya kullanıcı adı ara...">
+                </div>
+                <select id="user-project-filter" onchange="filterUserList()">
+                    <option value="">Tüm Projeler</option>
+                </select>
+            </div>
+            <div id="user-list-container" class="modern-list-container">Yükleniyor...</div>
         </div>
     `;
 
     Swal.fire({
         title: 'Kullanıcı Yönetimi',
         html: html,
-        width: 700,
+        width: 850,
         showConfirmButton: false,
         showCloseButton: true,
+        customClass: { popup: 'premium-swal' },
         didOpen: () => {
-            // Liste sekmesine tıklanınca yükle
             const listBtn = document.querySelector('[data-mgmt-tab="list"]');
-            // Eğer Liste sekmesi direkt açıksa (IK değilse default liste açılır) hemen yükle
             if (listBtn && listBtn.classList.contains('active')) {
                 loadUserListInternal();
             }
@@ -673,70 +690,85 @@ window.switchMgmtTab = function (tab, e) {
 
 window.loadUserListInternal = async function () {
     const container = document.getElementById('user-list-container');
-    container.innerHTML = 'Yükleniyor...';
+    container.innerHTML = '<div style="padding:20px; text-align:center;">⌛ Yükleniyor...</div>';
 
     try {
-        const { data: users, error } = await sb
-            .from('profiles')
-            .select('*');
+        const { data: users, error } = await sb.from('profiles').select('*').order('full_name');
+        if (error) throw error;
 
-        if (error) {
-            container.innerHTML = 'Hata: ' + error.message;
-            console.error('Supabase error:', error);
-            return;
+        window.allUserRecords = users || []; // Store for client-side filtering
+
+        // Populate Project Filter
+        const projects = [...new Set(users.map(u => u.project))].sort();
+        const projSelect = document.getElementById('user-project-filter');
+        if (projSelect) {
+            projSelect.innerHTML = '<option value="">Tüm Projeler</option>' +
+                projects.map(p => `<option value="${p}">${p}</option>`).join('');
         }
 
-        if (!users || users.length === 0) {
-            container.innerHTML = 'Kullanıcı bulunamadı';
-            return;
-        }
-
-        const uRole = (currentUser.role || '').toUpperCase();
-        const isIk = ['İK', 'IK', 'ADMIN'].includes(uRole);
-
-        let table = `
-            <table style="width:100%; border-collapse: collapse;">
-                <thead style="background:#f8f9fa;">
-                    <tr>
-                        <th style="padding:10px;">AD SOYAD</th>
-                        <th style="padding:10px;">E-POSTA / KULLANICI</th>
-                        <th style="padding:10px;">Rol</th>
-                        <th style="padding:10px;">Proje</th>
-                        <th style="padding:10px;">2FA</th>
-                        <th style="padding:10px;">İşlem</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        users.forEach(u => {
-            table += `
-                <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:10px;">${esc(u.full_name)}</td>
-                    <td style="padding:10px;">${esc(u.username)}</td>
-                    <td style="padding:10px;"><span class="badge-role">${esc(u.role)}</span><br><small style="color:#666;">${u.managed_scopes ? u.managed_scopes.join(', ') : ''}</small></td>
-                    <td style="padding:10px;">${esc(u.project)}</td>
-                    <td style="padding:10px;">${u.two_factor_enabled ? '✅ Aktif' : '❌ Pasif'}</td>
-                    <td style="padding:10px;">
-                        <button class="btn-sm btn-edit" style="background:#10b981; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}', '${esc((u.managed_scopes || []).join(', '))}')">Düzenle</button>
-                        <button class="btn-sm btn-reset" style="background:#f59e0b; color:white; border:none; padding:5px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')">Şifre Sıfırla</button>
-                        ${checkPermission('user_delete') ? `<button class="btn-sm btn-delete" style="background:#dc2626; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="delUser('${u.id}')">Sil</button>` : ''}
-                    </td>
-                </tr>
-            `;
-        });
-
-        table += `</tbody></table>`;
-        container.innerHTML = table;
+        renderUserTable(window.allUserRecords);
     } catch (err) {
-        console.error('loadUserListInternal error:', err);
-        container.innerHTML = `
-            <div style="padding:20px; color:#dc2626;">
-                <strong>Hata:</strong> ${err.message}<br><br>
-                <small>Console'u kontrol edin (F12)</small>
-            </div>
-        `;
+        container.innerHTML = `<div class="alert-error">Hata: ${err.message}</div>`;
     }
+}
+
+function renderUserTable(users) {
+    const container = document.getElementById('user-list-container');
+    if (!users || users.length === 0) {
+        container.innerHTML = '<div style="padding:40px; color:#999; text-align:center;">Personel bulunamadı.</div>';
+        return;
+    }
+
+    let html = `
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>PERSONEL</th>
+                    <th>TC / E-POSTA</th>
+                    <th>YETKİ / ROL</th>
+                    <th>PROJE</th>
+                    <th>2FA</th>
+                    <th style="text-align:right;">İŞLEMLER</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(u => `
+                    <tr>
+                        <td><strong>${esc(u.full_name)}</strong></td>
+                        <td><code>${esc(u.username)}</code></td>
+                        <td>
+                            <span class="badge-role">${esc(u.role)}</span>
+                            ${u.managed_scopes?.length ? `<div class="scope-text">${esc(u.managed_scopes.join(', '))}</div>` : ''}
+                        </td>
+                        <td><span class="badge-project">${esc(u.project)}</span></td>
+                        <td>${u.two_factor_enabled ? '🟢' : '⚪'}</td>
+                        <td style="text-align:right;">
+                            <div class="action-btns">
+                                <button class="btn-sm btn-edit" onclick="editUserDetails('${u.id}', '${u.role}', '${u.project}', '${esc((u.managed_scopes || []).join(', '))}')" title="Düzenle">✏️</button>
+                                <button class="btn-sm btn-reset" onclick="resetUserPassword('${u.id}', '${esc(u.username)}')" title="Şifre Sıfırla">🔑</button>
+                                ${checkPermission('user_delete') ? `<button class="btn-sm btn-delete" onclick="delUser('${u.id}')" title="Sil">🗑️</button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    container.innerHTML = html;
+}
+
+window.filterUserList = function () {
+    const search = document.getElementById('user-search').value.toLowerCase();
+    const project = document.getElementById('user-project-filter').value;
+
+    const filtered = window.allUserRecords.filter(u => {
+        const matchSearch = (u.full_name || '').toLowerCase().includes(search) ||
+            (u.username || '').toLowerCase().includes(search);
+        const matchProj = !project || u.project === project;
+        return matchSearch && matchProj;
+    });
+
+    renderUserTable(filtered);
 }
 
 window.submitAddUser = async function () {
@@ -1378,23 +1410,33 @@ async function submitRequest(e) {
 let ipFetchPromise = null;
 async function getClientInfo() {
     if (window.cachedClientInfo) return window.cachedClientInfo;
-    if (ipFetchPromise) return ipFetchPromise;
+    if (window.ipFetchPromise) return window.ipFetchPromise;
 
-    ipFetchPromise = (async () => {
-        try {
-            const res = await fetch('https://ip-api.com/json/', { signal: AbortSignal.timeout(3000) });
-            const data = await res.json();
-            if (data && data.status === 'success') {
-                window.cachedClientInfo = `${data.query} [${data.city}, ${data.regionName}]`;
-            } else {
-                window.cachedClientInfo = window.location.hostname;
+    window.ipFetchPromise = (async () => {
+        // Çoklu kaynak denemesi (birincil başarısız olursa ikincil)
+        const sources = [
+            'https://ipapi.co/json/',
+            'https://ip-api.com/json/'
+        ];
+
+        for (const url of sources) {
+            try {
+                const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+                const data = await res.json();
+                if (data && (data.ip || data.query)) {
+                    const ip = data.ip || data.query;
+                    const loc = data.city ? ` [${data.city}, ${data.region || data.regionName}]` : '';
+                    window.cachedClientInfo = `${ip}${loc}`;
+                    return window.cachedClientInfo;
+                }
+            } catch (e) {
+                console.warn(`IP Source ${url} failed, trying next...`);
             }
-        } catch (e) {
-            window.cachedClientInfo = window.location.hostname;
         }
+        window.cachedClientInfo = "Bilinmeyen IP";
         return window.cachedClientInfo;
     })();
-    return ipFetchPromise;
+    return window.ipFetchPromise;
 }
 
 // callApi function removed. All operations moved to Supabase.
