@@ -5,8 +5,8 @@ const SUPABASE_URL = 'https://cmewgawdwacdrijbvmex.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Kz5GU3lYBeawTncA78qvSA_X7pHQrHo';
 
 // Password Reset API (Google Apps Script Backend)
-// KURULUM: admin_tools/PASSWORD_RESET_SETUP.md dosyasına bakın
 const PASSWORD_RESET_API_URL = 'https://script.google.com/macros/s/AKfycbwM66KExhPuYxrCqb5fPtDvzggz-aDgy7mpu_j-V8DJw636KCov-v8vI6Bc8TleNjCVeA/exec';
+const ADMIN_SECRET_KEY = 'ST_SECRET_KEY_9988'; // GAS Script Properties'e eklediğiniz anahtar ile aynı olmalı
 
 // Initialize Supabase client
 const { createClient } = supabase;
@@ -840,6 +840,7 @@ window.submitAddUser = async function () {
             headers: { 'Content-Type': 'text/plain' }, // Avoid preflight OPTIONS
             body: JSON.stringify({
                 action: 'create_user',
+                secret: ADMIN_SECRET_KEY,
                 email: finalEmail,
                 password: '123456',
                 profileData: {
@@ -906,6 +907,7 @@ window.delUser = async function (id) {
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
                 action: 'delete_user',
+                secret: ADMIN_SECRET_KEY,
                 userId: id
             })
         });
@@ -1009,6 +1011,7 @@ window.resetUserPassword = async function (userId, username) {
             },
             body: JSON.stringify({
                 action: 'reset_password',
+                secret: ADMIN_SECRET_KEY,
                 userId: userId
             })
         });
