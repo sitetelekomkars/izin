@@ -308,13 +308,34 @@ async function handleLogin(e) {
         // 5. Dashboard'a Git
         await initDashboardWithUser(currentUser);
         await addLog('GİRİŞ', 'Sisteme giriş yapıldı');
-        Swal.fire('Başarılı', 'Giriş yapıldı!', 'success');
+        // Başarılı girişte artık pop-up göstermiyoruz, direkt içeri alıyoruz.
 
     } catch (err) {
-        statusDiv.innerText = 'Hata: ' + err.message;
-        statusDiv.className = 'status-error';
         btn.disabled = false;
-        Swal.fire('Giriş Hatası', err.message, 'error');
+        let userMsg = "Giriş yapılamadı. Lütfen bilgilerinizi kontrol edin.";
+
+        // Teknik hataları kullanıcı dostu mesajlara çevir
+        const em = err.message.toLowerCase();
+        if (em.includes("invalid login credentials")) {
+            userMsg = "Kullanıcı adı veya şifre hatalı.";
+        } else if (em.includes("email not confirmed")) {
+            userMsg = "E-posta adresi doğrulanmamış.";
+        } else if (em.includes("network error") || em.includes("fetch")) {
+            userMsg = "Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.";
+        } else if (em.includes("rate limit")) {
+            userMsg = "Çok fazla hatalı deneme yaptınız. Lütfen biraz bekleyin.";
+        }
+
+        statusDiv.innerText = userMsg;
+        statusDiv.className = 'status-error';
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Giriş Başarısız',
+            text: userMsg,
+            confirmButtonText: 'Tamam',
+            confirmButtonColor: '#0056b3'
+        });
     }
 }
 
@@ -1461,11 +1482,20 @@ async function getClientInfo() {
 // callApi function removed. All operations moved to Supabase.
 
 function showError(message) {
+    let msg = message;
+    // Gizlenmesi veya kısaltılması gereken teknik terimleri temizle
+    if (typeof message === 'string') {
+        if (message.includes("RLS") || message.includes("policy") || message.includes("postgrest")) {
+            msg = "Bu işlemi yapmak için yetkiniz bulunmamaktadır veya bir sistem hatası oluştu.";
+        }
+    }
+
     Swal.fire({
         icon: 'error',
-        title: 'Hata',
-        text: message,
-        confirmButtonText: 'Tamam'
+        title: 'İşlem Başarısız',
+        text: msg,
+        confirmButtonText: 'Anladım',
+        confirmButtonColor: '#dc3545'
     });
 }
 
