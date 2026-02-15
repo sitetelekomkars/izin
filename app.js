@@ -1135,9 +1135,7 @@ function renderPage(page) {
 
 
         let docAction = '';
-        const uRole = (role || "").toLowerCase();
-        const isAdmin = uRole === 'admin';
-        const isDanisma = uRole.includes('danı') || uRole.includes('danis');
+        const isDanisma = role.includes('DANI') || role.includes('DANIS');
 
         if ((isDanisma || isAdmin) && r.ik === 'Onaylandı') {
             docAction = `
