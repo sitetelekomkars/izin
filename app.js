@@ -745,9 +745,10 @@ window.submitAddUser = async function () {
     const fn = document.getElementById('new-u-fullname')?.value.trim() || '';
     const twoFa = document.getElementById('new-u-2fa')?.value === 'AKTİF';
 
-    if (!u) { Swal.showValidationMessage('Kullanıcı adı gerekli'); return; }
-    if (!fn) { Swal.showValidationMessage('Ad Soyad gerekli'); return; }
-    if (!p) { Swal.showValidationMessage('Proje gerekli'); return; }
+    if (!u || u.length < 3) { Swal.showValidationMessage('Kullanıcı adı en az 3 karakter olmalı'); return; }
+    if (!fn || fn.split(' ').length < 2) { Swal.showValidationMessage('Lütfen tam Ad Soyad giriniz'); return; }
+    if (!p) { Swal.showValidationMessage('Proje alanı zorunludur'); return; }
+    if (!r) { Swal.showValidationMessage('Lütfen bir rol seçin'); return; }
 
     // Email mantığı: Kullanıcı adının sonuna @example.com ekle
     const finalEmail = `${u}@example.com`;
@@ -808,20 +809,50 @@ window.submitAddUser = async function () {
 
 window.delUser = async function (id) {
     const confirm = await Swal.fire({
-        title: 'Silme İşlemi',
-        text: `Profil siliniyor! (Not: Auth kullanıcısını Dashboard'dan silmelisiniz)`,
-        icon: 'error',
-        showCancelButton: true
+        title: 'Kullanıcı Siliniyor',
+        text: `Bu işlem geri alınamaz! Kullanıcı hem Auth hem de profil verilerinden tamamen silinecektir.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Evet, Tamamen Sil',
+        cancelButtonText: 'Vazgeç'
     });
     if (!confirm.isConfirmed) return;
 
-    Swal.showLoading();
-    const { error } = await sb.from('profiles').delete().eq('id', id);
+    Swal.fire({
+        title: 'Siliniyor...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
 
-    if (error) Swal.fire('Hata', error.message, 'error');
-    else {
-        Swal.fire('Silindi', 'Profil silindi', 'success');
-        loadUserListInternal();
+    try {
+        const response = await fetch(PASSWORD_RESET_API_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'delete_user',
+                userId: id
+            })
+        });
+
+        const raw = await response.text();
+        let resData;
+        try {
+            resData = JSON.parse(raw);
+        } catch (e) {
+            throw new Error('API JSON dönmedi: ' + raw.slice(0, 120));
+        }
+
+        if (resData.success) {
+            Swal.fire('Başarılı', 'Kullanıcı başarıyla silindi.', 'success');
+            loadUserListInternal();
+        } else {
+            throw new Error(resData.error || 'Silme işlemi başarısız');
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Hata', 'Silme hatası: ' + err.message, 'error');
     }
 }
 
