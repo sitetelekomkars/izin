@@ -911,12 +911,6 @@ input:checked+.slider:before {
     transform: translateX(14px);
 }
 
-width: 100%;
-min-width: unset;
-font-size: 0.8rem;
-}
-}
-
 /* Sayfa Kaydırma Akıcılığı */
 * {
     -webkit-tap-highlight-color: transparent;
@@ -1382,4 +1376,159 @@ input:checked+.slider:before {
 .btn-save-perm:disabled {
     background-color: #95a5a6;
     cursor: not-allowed;
+}
+
+/* === PREMIUM LOGS & MODALS === */
+.premium-swal {
+    border-radius: 20px !important;
+    padding: 2rem !important;
+    background: #ffffff !important;
+}
+
+.log-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.log-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
+}
+
+.log-table th {
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid #edf2f7;
+    color: #4a5568;
+    font-weight: 700;
+    z-index: 10;
+}
+
+.log-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #edf2f7;
+    vertical-align: middle;
+}
+
+.log-table tr:hover {
+    background-color: #f1f5f9;
+}
+
+.log-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.log-giriş {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.log-talep_işlem {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.log-kullanıcı_ekle {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.log-kullanıcı_sil {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.log-yetki_güncelle {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+/* === MOBILE RESPONSIVENESS UPDATES === */
+@media (max-width: 768px) {
+    .premium-swal {
+        width: 98% !important;
+        padding: 1rem !important;
+    }
+
+    .log-table thead {
+        display: none;
+    }
+
+    .log-table tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+    }
+
+    .log-table td {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .log-table td:last-child {
+        border-bottom: none;
+    }
+
+    .log-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: #718096;
+    }
+
+    /* User Management Modal Fixes */
+    .mgmt-tabs {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .mgmt-tab-btn {
+        width: 100%;
+        text-align: left;
+    }
+
+    /* Request Form Grid */
+    .tab-content form div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Scrollbar Styling */
+.log-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.log-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
