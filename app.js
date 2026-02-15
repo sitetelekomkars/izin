@@ -1061,6 +1061,7 @@ function getStatusBadge(status) {
     const s = status ? status.toLowerCase() : '';
     if (s === 'onaylandi' || s === 'onaylandı') return '<span class="status st-green">✅ Onaylandı</span>';
     if (s === 'red' || s === 'reddedildi') return '<span class="status st-red">❌ Reddedildi</span>';
+    if (s === 'tl_bekliyor') return '<span class="status st-orange">⏳ TL Onayı Bekliyor</span>';
     if (s === 'spv_bekliyor') return '<span class="status st-orange">⏳ SPV Onayı Bekliyor</span>';
     if (s === 'ik_bekliyor') return '<span class="status st-orange">⏳ İK Onayı Bekliyor</span>';
     return '<span class="status st-gray">⏳ Bekliyor</span>';
@@ -1104,36 +1105,26 @@ function renderPage(page) {
         const role = (currentUser.role || '').toUpperCase();
         const s = r.status;
 
-        if (checkPermission('approve_reject')) {
-            const isAdmin = role === 'ADMIN';
-            if (s === 'tl_bekliyor' && (isAdmin || checkPermission('auth_tl'))) {
-                actionHtml = `
-                    <div class="action-btns">
-                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                    </div>`;
-            } else if (s === 'spv_bekliyor' && (isAdmin || checkPermission('auth_spv'))) {
-                actionHtml = `
-                    <div class="action-btns">
-                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                    </div>`;
-            } else if (s === 'ik_bekliyor' && (isAdmin || checkPermission('auth_ik') || role === 'İK' || role === 'IK')) {
-                actionHtml = `
-                    <div class="action-btns">
-                        <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
-                        <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
-                    </div>`;
-            } else {
-                if (s === 'red') {
-                    const ri = getDetailedRejectionInfo(r);
-                    actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
-                } else {
-                    actionHtml = getStatusBadge(s);
-                }
-            }
+        const isAdmin = role === 'ADMIN';
+        if (s === 'tl_bekliyor' && (isAdmin || checkPermission('auth_tl'))) {
+            actionHtml = `
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                </div>`;
+        } else if (s === 'spv_bekliyor' && (isAdmin || checkPermission('auth_spv'))) {
+            actionHtml = `
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                </div>`;
+        } else if (s === 'ik_bekliyor' && (isAdmin || checkPermission('auth_ik') || role === 'İK' || role === 'IK')) {
+            actionHtml = `
+                <div class="action-btns">
+                    <button class="action-btn approve" onclick="processRequest('${r.id}','Onaylandı')">✔️ Onayla</button>
+                    <button class="action-btn reject" onclick="processRequest('${r.id}','Reddedildi')">✖️ Reddet</button>
+                </div>`;
         } else {
-            // If no approve_reject permission, just show status
             if (s === 'red') {
                 const ri = getDetailedRejectionInfo(r);
                 actionHtml = `<span class="status st-red">❌ Red (${ri.from}): ${esc(ri.reason)}</span>`;
