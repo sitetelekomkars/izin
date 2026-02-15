@@ -125,6 +125,17 @@ window.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.removeItem('site_telekom_user');
         }
     }
+
+    // 3. SERVICE WORKER GÜNCELLEME KONTROLÜ (OTOMATİK YENİLEME)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            // Yeni bir SW aktif olduğunda sayfayı bir kez yenile (yeni kodlar çekilsin)
+            if (!window.isRefreshing) {
+                window.isRefreshing = true;
+                window.location.reload();
+            }
+        });
+    }
 });
 
 async function initDashboardWithUser(user) {
@@ -648,14 +659,16 @@ window.openUserMgmtModal = function () {
         <div id="mgmt-tab-list" class="mgmt-tab-content ${!canAdd ? '' : 'hidden'}">
             <div class="mgmt-filter-bar">
                 <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="user-search" onkeyup="filterUserList()" placeholder="İsim veya kullanıcı adı ara...">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="user-search" oninput="filterUserList()" placeholder="İsim veya kullanıcı adı ara...">
                 </div>
-                <select id="user-project-filter" onchange="filterUserList()">
-                    <option value="">Tüm Projeler</option>
-                </select>
+                <div class="filter-select-wrapper">
+                    <select id="user-project-filter" onchange="filterUserList()">
+                        <option value="">Tüm Projeler</option>
+                    </select>
+                </div>
             </div>
-            <div id="user-list-container" class="modern-list-container">Yükleniyor...</div>
+            <div id="user-list-container" class="modern-list-container">⌛ Yükleniyor...</div>
         </div>
     `;
 
@@ -758,14 +771,20 @@ function renderUserTable(users) {
 }
 
 window.filterUserList = function () {
-    const search = document.getElementById('user-search').value.toLowerCase();
-    const project = document.getElementById('user-project-filter').value;
+    const searchInput = document.getElementById('user-search');
+    const projectSelect = document.getElementById('user-project-filter');
+
+    if (!searchInput || !projectSelect || !window.allUserRecords) return;
+
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const projectTerm = projectSelect.value;
 
     const filtered = window.allUserRecords.filter(u => {
-        const matchSearch = (u.full_name || '').toLowerCase().includes(search) ||
-            (u.username || '').toLowerCase().includes(search);
-        const matchProj = !project || u.project === project;
-        return matchSearch && matchProj;
+        const nameMatch = (u.full_name || '').toLowerCase().includes(searchTerm);
+        const userMatch = (u.username || '').toLowerCase().includes(searchTerm);
+        const projMatch = !projectTerm || u.project === projectTerm;
+
+        return (nameMatch || userMatch) && projMatch;
     });
 
     renderUserTable(filtered);
